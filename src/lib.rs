@@ -14,35 +14,63 @@ use crate::util::color::Color;
 use crate::util::vector::Vec3;
 
 fn parse_spheres(data: &[f32], ambient_intensity: f32) -> Vec<Sphere> {
-    data.chunks_exact(10)
-        .map(|c| Sphere {
-            center: Vec3::new(c[0], c[1], c[2]),
-            radius: c[3],
-            material: Material::from_color(
-                Color::new(c[4], c[5], c[6]),
-                ambient_intensity,
-                c[7],
-                c[8],
-                c[9],
-            ),
+    data.chunks_exact(11)
+        .map(|c| {
+            let material_type = c[10] as i32;
+            let material = match material_type {
+                1 => Material::Metal {
+                    specular_color: Color::new(c[4], c[5], c[6]),
+                    glossiness: 0.0,
+                },
+                2 => Material::Dielectric {
+                    ior: 1.5,
+                    absorption: Color::new(c[4], c[5], c[6]),
+                },
+                _ => Material::from_color(
+                    Color::new(c[4], c[5], c[6]),
+                    ambient_intensity,
+                    c[7],
+                    c[8],
+                    c[9],
+                ),
+            };
+
+            Sphere {
+                center: Vec3::new(c[0], c[1], c[2]),
+                radius: c[3],
+                material,
+            }
         })
         .collect()
 }
 
 fn parse_triangles(data: &[f32], ambient_intensity: f32) -> Vec<Triangle> {
-    data.chunks_exact(15)
+    data.chunks_exact(16)
         .map(|c| {
-            Triangle::new(
-                Vec3::new(c[0], c[1], c[2]),
-                Vec3::new(c[3], c[4], c[5]),
-                Vec3::new(c[6], c[7], c[8]),
-                Material::from_color(
+            let material_type = c[15] as i32;
+            let material = match material_type {
+                1 => Material::Metal {
+                    specular_color: Color::new(c[9], c[10], c[11]),
+                    glossiness: 0.0,
+                },
+                2 => Material::Dielectric {
+                    ior: 1.5,
+                    absorption: Color::new(c[9], c[10], c[11]),
+                },
+                _ => Material::from_color(
                     Color::new(c[9], c[10], c[11]),
                     ambient_intensity,
                     c[12],
                     c[13],
                     c[14],
                 ),
+            };
+
+            Triangle::new(
+                Vec3::new(c[0], c[1], c[2]),
+                Vec3::new(c[3], c[4], c[5]),
+                Vec3::new(c[6], c[7], c[8]),
+                material,
             )
         })
         .collect()
@@ -70,13 +98,13 @@ pub fn render_rows(
     triangle_data: &[f32],
     light_data: &[f32],
     diffuse_intensity: f32,
-) -> Vec<u8> {
+) -> Vec<f32> {
     let spheres = parse_spheres(sphere_data, diffuse_intensity);
     let triangles = parse_triangles(triangle_data, diffuse_intensity);
     let lights = parse_lights(light_data);
     let row_count = end_row - start_row;
     let mut pixels = Vec::with_capacity((row_count * width * 4) as usize);
-    let alpha = 0xffu8;
+    let alpha = 1.0f32;
     let camera = Camera::new(
         Vec3 {
             x: 0.0,
@@ -109,11 +137,10 @@ pub fn render_rows(
                 &triangles,
                 &lights,
                 &camera,
-            )
-            .clamp01();
-            pixels.push((color.r * 255.0) as u8);
-            pixels.push((color.g * 255.0) as u8);
-            pixels.push((color.b * 255.0) as u8);
+            );
+            pixels.push(color.r);
+            pixels.push(color.g);
+            pixels.push(color.b);
             pixels.push(alpha);
         }
     }

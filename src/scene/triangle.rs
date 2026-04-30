@@ -45,7 +45,7 @@ impl Triangle {
         let mu = hit_offsets.y;
         let tao = hit_offsets.z;
 
-        if lambda <= 0.0 || mu < 0.0 || tao < 0.0 || mu + tao > 1.0 {
+        if lambda <= 0.0001 || mu < 0.0 || tao < 0.0 || mu + tao > 1.0 {
             return None;
         }
 
@@ -56,6 +56,7 @@ impl Triangle {
             self.material,
             Some(hit_offsets.y),
             Some(hit_offsets.z),
+            ray.direction,
         ))
     }
 }

@@ -44,9 +44,86 @@ export class App {
   }
 
   private renderParallel(width: number, height: number, canvas: HTMLCanvasElement, sceneConfig: SceneConfig) {
-    const ctx = canvas.getContext('2d')!;
-    const imageData = ctx.createImageData(width, height);
-    const pixels = imageData.data;
+    let gl = (canvas as any).__gl as WebGL2RenderingContext;
+    let program = (canvas as any).__program as WebGLProgram;
+    let tex = (canvas as any).__tex as WebGLTexture;
+
+    if (!gl) {
+      gl = canvas.getContext('webgl2', {
+        antialias: false,
+        depth: false,
+        premultipliedAlpha: false,
+        // @ts-ignore
+        colorSpace: 'display-p3'
+      }) as WebGL2RenderingContext;
+
+      gl.getExtension('EXT_color_buffer_float');
+
+      const vs = gl.createShader(gl.VERTEX_SHADER)!;
+      gl.shaderSource(vs, `#version 300 es
+        in vec2 a_position;
+        in vec2 a_texCoord;
+        out vec2 v_texCoord;
+        void main() {
+          gl_Position = vec4(a_position, 0.0, 1.0);
+          v_texCoord = a_texCoord;
+        }
+      `);
+      gl.compileShader(vs);
+
+      const fs = gl.createShader(gl.FRAGMENT_SHADER)!;
+      gl.shaderSource(fs, `#version 300 es
+        precision highp float;
+        uniform sampler2D u_image;
+        in vec2 v_texCoord;
+        out vec4 outColor;
+        void main() {
+          vec4 color = texture(u_image, vec2(v_texCoord.x, v_texCoord.y));
+          outColor = color;
+        }
+      `);
+      gl.compileShader(fs);
+
+      program = gl.createProgram()!;
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+
+      const posBuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        -1, -1, 0, 1,
+        1, -1, 1, 1,
+        -1, 1, 0, 0,
+        1, 1, 1, 0,
+      ]), gl.STATIC_DRAW);
+
+      tex = gl.createTexture()!;
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+      (canvas as any).__gl = gl;
+      (canvas as any).__program = program;
+      (canvas as any).__tex = tex;
+    }
+
+    gl.viewport(0, 0, width, height);
+    gl.useProgram(program);
+
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
+
+    const posLoc = gl.getAttribLocation(program, 'a_position');
+    const texLoc = gl.getAttribLocation(program, 'a_texCoord');
+
+    // We already have buffer bound
+    gl.enableVertexAttribArray(posLoc);
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 16, 0);
+    gl.enableVertexAttribArray(texLoc);
+    gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, 16, 8);
 
     const sphereData = this.scene.buildSphereData(sceneConfig.spheres);
     const triangleData = this.scene.buildTriangleData(sceneConfig.triangles);
@@ -65,17 +142,15 @@ export class App {
       const chunk = chunks.pop();
       if (!chunk) return;
 
-      worker.onmessage = ({ data }: MessageEvent<{ startRow: number; endRow: number; pixels: Uint8Array }>) => {
-        const startIdx = data.startRow * width * 4;
-        const endIdx = data.endRow * width * 4;
-        for (let i = 0; i < data.pixels.length; i++) {
-          pixels[startIdx + i] = data.pixels[i];
-        }
+      worker.onmessage = ({ data }: MessageEvent<{ startRow: number; endRow: number; pixels: Float32Array }>) => {
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, data.startRow, width, data.endRow - data.startRow, gl.RGBA, gl.FLOAT, data.pixels);
+
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
         completed++;
 
-        if (completed === total) {
-          ctx.putImageData(imageData, 0, 0);
-        } else {
+        if (completed !== total) {
           dispatch(worker);
         }
       };

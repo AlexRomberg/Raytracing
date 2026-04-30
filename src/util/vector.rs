@@ -40,6 +40,21 @@ impl Vec3 {
             z: self.x * other.y - self.y * other.x,
         }
     }
+
+    pub fn reflect(i: Self, n: Self) -> Self {
+        i - n * (2.0 * i.dot(&n))
+    }
+
+    pub fn refract(i: Self, n: Self, eta1: f32, eta2: f32) -> Option<Self> {
+        let eta = eta1 / eta2;
+        let cos_theta1 = -i.dot(&n);
+        let k = 1.0 - eta * eta * (1.0 - cos_theta1 * cos_theta1);
+        if k < 0.0 {
+            None // Total internal reflection
+        } else {
+            Some(i * eta + n * (eta * cos_theta1 - k.sqrt()))
+        }
+    }
 }
 
 impl Add for Vec3 {

@@ -22,9 +22,26 @@ impl Sphere {
             return None;
         }
 
-        let lambda = (-b - (root_content).sqrt()) / (2.0 * a);
+        let mut lambda = (-b - root_content.sqrt()) / (2.0 * a);
+
+        if lambda <= 0.0001 {
+            lambda = (-b + root_content.sqrt()) / (2.0 * a);
+        }
+
+        if lambda <= 0.0001 {
+            return None;
+        }
+
         let point = ray.origin + ray.direction * lambda;
         let normal = (point - self.center).normalized();
-        Some(Hit::new(point, normal, lambda, self.material, None, None))
+        Some(Hit::new(
+            point,
+            normal,
+            lambda,
+            self.material,
+            None,
+            None,
+            ray.direction,
+        ))
     }
 }

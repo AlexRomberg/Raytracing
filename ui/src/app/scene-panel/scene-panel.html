@@ -85,6 +85,19 @@
           </div>
 
           <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Material</span>
+            <select
+              class="w-full bg-zinc-700/50 backdrop-blur-sm rounded border border-zinc-600 px-2 py-1 text-sm outline-none focus:border-blue-400 focus:bg-zinc-700 transition-colors"
+              [ngModel]="sphere.materialType || 0"
+              (ngModelChange)="onSphereChange($index, 'materialType', $event * 1)"
+            >
+              <option [value]="0">Matte (Blinn-Phong)</option>
+              <option [value]="1">Mirror (Metal)</option>
+              <option [value]="2">Glass (Dielectric)</option>
+            </select>
+          </div>
+
+          <div class="space-y-1">
             <span class="text-xs text-zinc-400 font-medium">Diffuse Coefficient</span>
             <input
               type="number"
@@ -183,6 +196,19 @@
               [value]="triangle.color"
               (valueChange)="onTriangleChange($index, 'color', $event)"
             ></app-color-input>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Material</span>
+            <select
+              class="w-full bg-zinc-700/50 backdrop-blur-sm rounded border border-zinc-600 px-2 py-1 text-sm outline-none focus:border-blue-400 focus:bg-zinc-700 transition-colors"
+              [ngModel]="triangle.materialType || 0"
+              (ngModelChange)="onTriangleChange($index, 'materialType', $event * 1)"
+            >
+              <option [value]="0">Matte (Blinn-Phong)</option>
+              <option [value]="1">Mirror (Metal)</option>
+              <option [value]="2">Glass (Dielectric)</option>
+            </select>
           </div>
 
           <div class="space-y-1">
