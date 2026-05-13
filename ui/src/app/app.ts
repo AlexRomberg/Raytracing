@@ -126,7 +126,7 @@ export class App {
     gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, 16, 8);
 
     const sphereData = this.scene.buildSphereData(sceneConfig.spheres);
-    const triangleData = this.scene.buildTriangleData(sceneConfig.triangles);
+    const triangleData = this.scene.buildTriangleData(sceneConfig.triangles, sceneConfig.objects);
     const lightData = this.scene.buildLightData(sceneConfig.lights);
     const diffuseIntensity = sceneConfig.diffuseIntensity;
 

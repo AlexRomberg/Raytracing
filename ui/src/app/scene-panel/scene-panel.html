@@ -298,5 +298,132 @@
         </div>
       }
     </section>
+
+    <!-- Objects -->
+    <section>
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-semibold">Objects</h3>
+        <button
+          class="text-xs bg-green-600 hover:bg-green-500 px-2 py-1 rounded cursor-pointer"
+          (click)="addObject()"
+        >
+          + Add
+        </button>
+      </div>
+
+      @for (object of objects(); track $index) {
+        <div class="mb-4 p-4 bg-zinc-800/80 rounded-lg border border-zinc-700 space-y-4 shadow-lg">
+          <div class="flex items-center justify-between">
+            <input
+              type="text"
+              class="bg-transparent text-sm font-semibold w-full outline-none border-b border-transparent focus:border-blue-400 text-zinc-100 placeholder-zinc-500 transition-colors"
+              [ngModel]="object.name"
+              (ngModelChange)="onObjectChange($index, 'name', $event)"
+              placeholder="Object name"
+            />
+            <button
+              class="text-red-400 hover:text-red-300 bg-red-400/10 hover:bg-red-400/20 px-2 py-1 rounded text-xs ml-2 cursor-pointer shrink-0 transition-colors"
+              (click)="removeObject($index)"
+            >
+              Remove
+            </button>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">OBJ File</span>
+            <input
+              type="file"
+              accept=".obj"
+              class="w-full text-xs text-zinc-300 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer"
+              (change)="onObjFileSelected($index, $event)"
+            />
+            @if (object.mesh) {
+              <span class="text-xs text-zinc-500">
+                {{ object.mesh.vertices.length }} vertices, {{ object.mesh.faces.length }} triangles
+              </span>
+            } @else {
+              <span class="text-xs text-zinc-500">No mesh loaded</span>
+            }
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Position</span>
+            <app-vec3-input
+              [value]="object.offset"
+              (valueChange)="onObjectChange($index, 'offset', $event)"
+            ></app-vec3-input>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Scale</span>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              class="w-full bg-zinc-700/50 backdrop-blur-sm rounded border border-zinc-600 px-2 py-1 text-sm outline-none focus:border-blue-400 focus:bg-zinc-700 transition-colors"
+              [ngModel]="object.scale"
+              (ngModelChange)="onObjectChange($index, 'scale', $event)"
+            />
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Color</span>
+            <app-color-input
+              [value]="object.color"
+              (valueChange)="onObjectChange($index, 'color', $event)"
+            ></app-color-input>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Material</span>
+            <select
+              class="w-full bg-zinc-700/50 backdrop-blur-sm rounded border border-zinc-600 px-2 py-1 text-sm outline-none focus:border-blue-400 focus:bg-zinc-700 transition-colors"
+              [ngModel]="object.materialType || 0"
+              (ngModelChange)="onObjectChange($index, 'materialType', $event * 1)"
+            >
+              <option [value]="0">Matte (Blinn-Phong)</option>
+              <option [value]="1">Mirror (Metal)</option>
+              <option [value]="2">Glass (Dielectric)</option>
+            </select>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Diffuse Coefficient</span>
+            <input
+              type="number"
+              step="0.05"
+              min="0"
+              class="w-full bg-zinc-700/50 backdrop-blur-sm rounded border border-zinc-600 px-2 py-1 text-sm outline-none focus:border-blue-400 focus:bg-zinc-700 transition-colors"
+              [ngModel]="object.diffuse"
+              (ngModelChange)="onObjectChange($index, 'diffuse', $event)"
+            />
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Specular Coefficient</span>
+            <input
+              type="number"
+              step="0.05"
+              min="0"
+              class="w-full bg-zinc-700/50 backdrop-blur-sm rounded border border-zinc-600 px-2 py-1 text-sm outline-none focus:border-blue-400 focus:bg-zinc-700 transition-colors"
+              [ngModel]="object.specular"
+              (ngModelChange)="onObjectChange($index, 'specular', $event)"
+            />
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Shininess</span>
+            <input
+              type="number"
+              step="1"
+              min="1"
+              class="w-full bg-zinc-700/50 backdrop-blur-sm rounded border border-zinc-600 px-2 py-1 text-sm outline-none focus:border-blue-400 focus:bg-zinc-700 transition-colors"
+              [ngModel]="object.shininess"
+              (ngModelChange)="onObjectChange($index, 'shininess', $event)"
+            />
+          </div>
+        </div>
+      }
+    </section>
   </div>
 </div>

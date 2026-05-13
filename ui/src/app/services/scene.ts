@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import type { ParsedMesh } from './obj-loader';
 
 export interface Vec3 {
   x: number;
@@ -41,6 +42,18 @@ export interface TriangleConfig {
   materialType?: MaterialType;
 }
 
+export interface ObjectConfig {
+  name: string;
+  mesh: ParsedMesh | null;
+  scale: number;
+  offset: Vec3;
+  color: Color;
+  shininess: number;
+  diffuse: number;
+  specular: number;
+  materialType?: MaterialType;
+}
+
 enum MaterialType {
   BlinnPhong = 0,
   Metal = 1,
@@ -54,6 +67,7 @@ const DEFAULT_SPECULAR = 0.7;
 export interface SceneConfig {
   diffuseIntensity: number;
   spheres: SphereConfig[];
+  objects: ObjectConfig[];
   triangles: TriangleConfig[];
   lights: LightConfig[];
 }
@@ -208,6 +222,7 @@ const DEFAULT_SCENE: SceneConfig = {
   lights: [
     { name: 'Main light', center: { x: 0, y: 0, z: 350 }, color: { r: 1, g: 1, b: 1 } },
   ],
+  objects: [],
 };
 
 @Injectable({
@@ -306,6 +321,39 @@ export class Scene {
     }));
   }
 
+  updateObject(index: number, partial: Partial<ObjectConfig>) {
+    this.scene.update(s => {
+      const objects = s.objects.map((sp, i) => i === index ? { ...sp, ...partial } : sp);
+      return { ...s, objects };
+    });
+  }
+
+  addObject() {
+    this.scene.update(s => ({
+      ...s,
+      objects: [
+        ...s.objects,
+        {
+          name: `Object ${s.objects.length + 1}`,
+          mesh: null,
+          scale: 100,
+          offset: { x: 0, y: 0, z: 400 },
+          color: { r: 1, g: 1, b: 1 },
+          shininess: DEFAULT_SHININESS,
+          diffuse: DEFAULT_DIFFUSE,
+          specular: DEFAULT_SPECULAR,
+        },
+      ],
+    }));
+  }
+
+  removeObject(index: number) {
+    this.scene.update(s => ({
+      ...s,
+      objects: s.objects.filter((_, i) => i !== index),
+    }));
+  }
+
   public buildSphereData(spheres: SphereConfig[]): Float32Array {
     const data = new Float32Array(spheres.length * 11);
     for (let i = 0; i < spheres.length; i++) {
@@ -322,20 +370,76 @@ export class Scene {
     return data;
   }
 
-  buildTriangleData(triangles: TriangleConfig[]): Float32Array {
-    const data = new Float32Array(triangles.length * 16);
+  buildTriangleData(triangles: TriangleConfig[], objects: ObjectConfig[] = []): Float32Array {
+    let meshTriCount = 0;
+    for (const obj of objects) {
+      if (obj.mesh) meshTriCount += obj.mesh.faces.length;
+    }
+    const total = triangles.length + meshTriCount;
+    const data = new Float32Array(total * 16);
+
     for (let i = 0; i < triangles.length; i++) {
       const t = triangles[i];
       const o = i * 16;
-      data[o] = t.pointA.x; data[o + 1] = t.pointA.y; data[o + 2] = -t.pointA.z;
-      data[o + 3] = t.pointB.x; data[o + 4] = t.pointB.y; data[o + 5] = -t.pointB.z;
-      data[o + 6] = t.pointC.x; data[o + 7] = t.pointC.y; data[o + 8] = -t.pointC.z;
-      data[o + 9] = t.color.r; data[o + 10] = t.color.g; data[o + 11] = t.color.b;
+      data[o] = t.pointA.x;
+      data[o + 1] = t.pointA.y;
+      data[o + 2] = -t.pointA.z;
+
+      data[o + 3] = t.pointB.x;
+      data[o + 4] = t.pointB.y;
+      data[o + 5] = -t.pointB.z;
+
+      data[o + 6] = t.pointC.x;
+      data[o + 7] = t.pointC.y;
+      data[o + 8] = -t.pointC.z;
+
+      data[o + 9] = t.color.r;
+      data[o + 10] = t.color.g;
+      data[o + 11] = t.color.b;
+
       data[o + 12] = t.shininess;
       data[o + 13] = t.diffuse;
       data[o + 14] = t.specular;
       data[o + 15] = t.materialType ?? 0;
     }
+
+    let cursor = triangles.length;
+    for (const obj of objects) {
+      if (!obj.mesh) continue;
+      const { vertices, faces } = obj.mesh;
+      const s = obj.scale;
+      const ox = obj.offset.x;
+      const oy = obj.offset.y;
+      const oz = obj.offset.z;
+      for (const [ia, ib, ic] of faces) {
+        const a = vertices[ia];
+        const b = vertices[ib];
+        const c = vertices[ic];
+        const o = cursor * 16;
+        data[o] = a.x * s + ox;
+        data[o + 1] = a.y * s + oy;
+        data[o + 2] = -(a.z * s + oz);
+
+        data[o + 3] = b.x * s + ox;
+        data[o + 4] = b.y * s + oy;
+        data[o + 5] = -(b.z * s + oz);
+
+        data[o + 6] = c.x * s + ox;
+        data[o + 7] = c.y * s + oy;
+        data[o + 8] = -(c.z * s + oz);
+
+        data[o + 9] = obj.color.r;
+        data[o + 10] = obj.color.g;
+        data[o + 11] = obj.color.b;
+
+        data[o + 12] = obj.shininess;
+        data[o + 13] = obj.diffuse;
+        data[o + 14] = obj.specular;
+        data[o + 15] = obj.materialType ?? 0;
+        cursor++;
+      }
+    }
+
     return data;
   }
 
@@ -344,8 +448,13 @@ export class Scene {
     for (let i = 0; i < lights.length; i++) {
       const l = lights[i];
       const o = i * 6;
-      data[o] = l.center.x; data[o + 1] = l.center.y; data[o + 2] = -l.center.z;
-      data[o + 3] = l.color.r; data[o + 4] = l.color.g; data[o + 5] = l.color.b;
+      data[o] = l.center.x;
+      data[o + 1] = l.center.y;
+      data[o + 2] = -l.center.z;
+
+      data[o + 3] = l.color.r;
+      data[o + 4] = l.color.g;
+      data[o + 5] = l.color.b;
     }
     return data;
   }
