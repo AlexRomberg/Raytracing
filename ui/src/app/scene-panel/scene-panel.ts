@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Color, Scene, Vec3 } from '../services/scene';
 import { ObjLoader } from '../services/obj-loader';
@@ -15,6 +15,8 @@ export class ScenePanel {
     protected scene = inject(Scene);
     private objLoader = inject(ObjLoader);
     protected open = signal(false);
+    public rendering = input.required<boolean>();
+    public render = output();
 
     protected sceneConfig = this.scene.scene;
     protected spheres = computed(() => this.sceneConfig().spheres);

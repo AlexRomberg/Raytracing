@@ -1,4 +1,4 @@
-import { Component, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { Component, effect, ElementRef, inject, signal, untracked, viewChild } from '@angular/core';
 import { Scene, SceneConfig } from './services/scene';
 import { ScenePanel } from './scene-panel/scene-panel';
 import { SceneData } from './render.worker';
@@ -17,6 +17,8 @@ const ROWS_PER_CHUNK = 10;
 export class App {
   private canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('raytracerCanvas');
   private windowSize = signal({ width: window.innerWidth, height: window.innerHeight });
+  private renderTick = signal(0);
+  protected rendering = signal(false);
   private workers: Worker[] = [];
   private scene = inject(Scene);
 
@@ -31,16 +33,21 @@ export class App {
       if (!canvas) return;
 
       const { width, height } = this.windowSize();
+      this.renderTick();
       canvas.nativeElement.width = width;
       canvas.nativeElement.height = height;
 
-      const sceneConfig = this.scene.scene();
+      const sceneConfig = untracked(() => this.scene.scene());
       this.renderParallel(width, height, canvas.nativeElement, sceneConfig);
     });
   }
 
   onResize() {
     this.windowSize.set({ width: window.innerWidth, height: window.innerHeight });
+  }
+
+  render() {
+    this.renderTick.update(t => t + 1);
   }
 
   private renderParallel(width: number, height: number, canvas: HTMLCanvasElement, sceneConfig: SceneConfig) {
@@ -137,6 +144,7 @@ export class App {
 
     let completed = 0;
     const total = chunks.length;
+    this.rendering.set(true);
 
     const dispatch = (worker: Worker) => {
       const chunk = chunks.pop();
@@ -150,7 +158,9 @@ export class App {
 
         completed++;
 
-        if (completed !== total) {
+        if (completed === total) {
+          this.rendering.set(false);
+        } else {
           dispatch(worker);
         }
       };
