@@ -64,12 +64,20 @@ const DEFAULT_SHININESS = 32;
 const DEFAULT_DIFFUSE = 1;
 const DEFAULT_SPECULAR = 0.7;
 
+export interface SkyboxConfig {
+  pixels: Float32Array;
+  width: number;
+  height: number;
+  brightness: number;
+}
+
 export interface SceneConfig {
   diffuseIntensity: number;
   spheres: SphereConfig[];
   objects: ObjectConfig[];
   triangles: TriangleConfig[];
   lights: LightConfig[];
+  skybox: SkyboxConfig | null;
 }
 
 const POINT_FBL: Vec3 = { x: -500, y: -500, z: 0 };
@@ -223,6 +231,7 @@ const DEFAULT_SCENE: SceneConfig = {
     { name: 'Main light', center: { x: 0, y: 0, z: 350 }, color: { r: 1, g: 1, b: 1 } },
   ],
   objects: [],
+  skybox: null,
 };
 
 @Injectable({
@@ -441,6 +450,14 @@ export class Scene {
     }
 
     return data;
+  }
+
+  setSkybox(skybox: SkyboxConfig | null) {
+    this.scene.update(s => ({ ...s, skybox }));
+  }
+
+  updateSkyboxBrightness(brightness: number) {
+    this.scene.update(s => s.skybox ? { ...s, skybox: { ...s.skybox, brightness } } : s);
   }
 
   public buildLightData(lights: LightConfig[]): Float32Array {

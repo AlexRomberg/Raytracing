@@ -1,5 +1,6 @@
 use crate::scene::light::Light;
 use crate::scene::material::Material;
+use crate::scene::skybox::Skybox;
 use crate::scene::sphere::Sphere;
 use crate::scene::triangle::Triangle;
 use crate::util::camera::Camera;
@@ -22,9 +23,10 @@ pub fn get_pixel(
     triangles: &[Triangle],
     lights: &[Light],
     camera: &Camera,
+    skybox: Option<&Skybox>,
 ) -> Color {
     let ray = camera.get_ray(x, y, width, height);
-    trace_ray(&ray, 15, spheres, triangles, lights)
+    trace_ray(&ray, 15, spheres, triangles, lights, skybox)
 }
 
 fn trace_ray(
@@ -33,6 +35,7 @@ fn trace_ray(
     spheres: &[Sphere],
     triangles: &[Triangle],
     lights: &[Light],
+    skybox: Option<&Skybox>,
 ) -> Color {
     if depth == 0 {
         return Color::new(0.0, 0.0, 0.0);
@@ -40,8 +43,10 @@ fn trace_ray(
 
     let nearest_hit = get_hit(spheres, triangles, *ray);
     if nearest_hit.is_none() {
-        return Color::new(0.0, 0.0, 0.0);
-        // Todo (ARO): Add Skybox
+        return match skybox {
+            Some(sb) => sb.sample(ray.direction),
+            None => Color::new(0.0, 0.0, 0.0),
+        };
     }
 
     let hit = nearest_hit.unwrap();
@@ -55,7 +60,7 @@ fn trace_ray(
         } => {
             let reflected_dir = Vec3::reflect(ray.direction, hit.normal);
             let reflected_ray = Ray::new(hit.point + offset_shift, reflected_dir);
-            let color = trace_ray(&reflected_ray, depth - 1, spheres, triangles, lights);
+            let color = trace_ray(&reflected_ray, depth - 1, spheres, triangles, lights, skybox);
             // NOTE (ARO): Ignore glossiness for now
             specular_color * color
         }
@@ -71,12 +76,13 @@ fn trace_ray(
 
             let reflected_dir = Vec3::reflect(i, n);
             let reflected_ray = Ray::new(hit.point + n * 0.0005, reflected_dir);
-            let reflected_color = trace_ray(&reflected_ray, depth - 1, spheres, triangles, lights);
+            let reflected_color =
+                trace_ray(&reflected_ray, depth - 1, spheres, triangles, lights, skybox);
 
             if let Some(refracted_dir) = Vec3::refract(i, n, eta1, eta2) {
                 let refracted_ray = Ray::new(hit.point - n * 0.0005, refracted_dir);
                 let refracted_color =
-                    trace_ray(&refracted_ray, depth - 1, spheres, triangles, lights);
+                    trace_ray(&refracted_ray, depth - 1, spheres, triangles, lights, skybox);
                 let cos_a = -i.dot(&n);
                 let f = fresnel_schlick(eta1, eta2, cos_a);
                 (reflected_color * f) + (refracted_color * (1.0 - f))

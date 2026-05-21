@@ -136,6 +136,11 @@ export class App {
     const triangleData = this.scene.buildTriangleData(sceneConfig.triangles, sceneConfig.objects);
     const lightData = this.scene.buildLightData(sceneConfig.lights);
     const diffuseIntensity = sceneConfig.diffuseIntensity;
+    const skybox = sceneConfig.skybox;
+    const skyboxPixels = skybox?.pixels ?? new Float32Array(0);
+    const skyboxWidth = skybox?.width ?? 0;
+    const skyboxHeight = skybox?.height ?? 0;
+    const skyboxBrightness = skybox?.brightness ?? 1;
 
     const chunks: { startRow: number; endRow: number }[] = [];
     for (let row = 0; row < height; row += ROWS_PER_CHUNK) {
@@ -165,7 +170,7 @@ export class App {
         }
       };
 
-      const sceneData: SceneData = { width, height, startRow: chunk.startRow, endRow: chunk.endRow, sphereData, triangleData, lightData, diffuseIntensity };
+      const sceneData: SceneData = { width, height, startRow: chunk.startRow, endRow: chunk.endRow, sphereData, triangleData, lightData, diffuseIntensity, skyboxPixels, skyboxWidth, skyboxHeight, skyboxBrightness };
 
       worker.postMessage(sceneData);
     };

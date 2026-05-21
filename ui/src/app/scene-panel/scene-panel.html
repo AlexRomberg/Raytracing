@@ -39,6 +39,51 @@
       <span class="text-xs text-zinc-500">{{ diffuseIntensity() }}</span>
     </div>
 
+    <!-- Skybox -->
+    <section>
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-semibold">Skybox</h3>
+        @if (skybox()) {
+          <button
+            class="text-xs bg-red-400/10 hover:bg-red-400/20 text-red-400 hover:text-red-300 px-2 py-1 rounded cursor-pointer transition-colors"
+            (click)="clearSkybox()"
+          >
+            Remove
+          </button>
+        }
+      </div>
+      <div class="p-4 bg-zinc-800/80 rounded-lg border border-zinc-700 space-y-4 shadow-lg">
+        <div class="space-y-1">
+          <span class="text-xs text-zinc-400 font-medium">Equirectangular Image</span>
+          <input
+            type="file"
+            accept="image/*"
+            class="w-full text-xs text-zinc-300 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer"
+            (change)="onSkyboxFileSelected($event)"
+          />
+          @if (skybox(); as sb) {
+            <span class="text-xs text-zinc-500">{{ sb.width }} × {{ sb.height }}</span>
+          } @else {
+            <span class="text-xs text-zinc-500">No skybox loaded</span>
+          }
+        </div>
+        <div class="space-y-1">
+          <span class="text-xs text-zinc-400 font-medium">Brightness</span>
+          <input
+            type="range"
+            min="0"
+            max="3"
+            step="0.05"
+            class="w-full"
+            [disabled]="!skybox()"
+            [ngModel]="skybox()?.brightness ?? 1"
+            (ngModelChange)="onSkyboxBrightnessChange($event)"
+          />
+          <span class="text-xs text-zinc-500">{{ skybox()?.brightness ?? 1 }}</span>
+        </div>
+      </div>
+    </section>
+
     <!-- Spheres -->
     <section>
       <div class="flex items-center justify-between mb-2">

@@ -13,16 +13,20 @@ export interface SceneData {
   triangleData: Float32Array;
   lightData: Float32Array;
   diffuseIntensity: number;
+  skyboxPixels: Float32Array;
+  skyboxWidth: number;
+  skyboxHeight: number;
+  skyboxBrightness: number;
 };
 
 addEventListener("message", async ({ data }: MessageEvent<SceneData>) => {
-  const { width, height, startRow, endRow, sphereData, triangleData, lightData, diffuseIntensity } = data;
+  const { width, height, startRow, endRow, sphereData, triangleData, lightData, diffuseIntensity, skyboxPixels, skyboxWidth, skyboxHeight, skyboxBrightness } = data;
 
   if (!initialized) {
     await init({ module_or_path: "/raytracer_bg.wasm" });
     initialized = true;
   }
 
-  const pixels = render_rows(width, height, startRow, endRow, sphereData, triangleData, lightData, diffuseIntensity);
+  const pixels = render_rows(width, height, startRow, endRow, sphereData, triangleData, lightData, diffuseIntensity, skyboxPixels, skyboxWidth, skyboxHeight, skyboxBrightness);
   postMessage({ startRow, endRow, pixels }, [pixels.buffer] as any);
 });

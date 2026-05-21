@@ -8,6 +8,7 @@ use scene::material::Material;
 use scene::scene::get_pixel;
 use scene::sphere::Sphere;
 
+use crate::scene::skybox::Skybox;
 use crate::scene::triangle::Triangle;
 use crate::util::camera::Camera;
 use crate::util::color::Color;
@@ -98,10 +99,21 @@ pub fn render_rows(
     triangle_data: &[f32],
     light_data: &[f32],
     diffuse_intensity: f32,
+    skybox_pixels: &[f32],
+    skybox_width: u32,
+    skybox_height: u32,
+    skybox_brightness: f32,
 ) -> Vec<f32> {
     let spheres = parse_spheres(sphere_data, diffuse_intensity);
     let triangles = parse_triangles(triangle_data, diffuse_intensity);
     let lights = parse_lights(light_data);
+    let skybox = Skybox::from_slice(
+        skybox_pixels,
+        skybox_width,
+        skybox_height,
+        skybox_brightness,
+    );
+    let skybox_ref = skybox.as_ref();
     let row_count = end_row - start_row;
     let mut pixels = Vec::with_capacity((row_count * width * 4) as usize);
     let alpha = 1.0f32;
@@ -137,6 +149,7 @@ pub fn render_rows(
                 &triangles,
                 &lights,
                 &camera,
+                skybox_ref,
             );
             pixels.push(color.r);
             pixels.push(color.g);

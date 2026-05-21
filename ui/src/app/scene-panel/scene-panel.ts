@@ -24,6 +24,7 @@ export class ScenePanel {
     protected triangles = computed(() => this.sceneConfig().triangles);
     protected objects = computed(() => this.sceneConfig().objects);
     protected diffuseIntensity = computed(() => this.sceneConfig().diffuseIntensity);
+    protected skybox = computed(() => this.sceneConfig().skybox);
 
     toggle() {
         this.open.update(v => !v);
@@ -88,5 +89,45 @@ export class ScenePanel {
         const text = await file.text();
         const mesh = this.objLoader.parse(text);
         this.scene.updateObject(index, { mesh, name: file.name });
+    }
+
+    async onSkyboxFileSelected(event: Event) {
+        const input = event.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        try {
+            const img = new Image();
+            img.src = url;
+            await img.decode();
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d')!;
+            ctx.drawImage(img, 0, 0);
+            const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const pixels = new Float32Array(canvas.width * canvas.height * 3);
+            for (let i = 0, j = 0; i < data.length; i += 4, j += 3) {
+                pixels[j] = data[i] / 255;
+                pixels[j + 1] = data[i + 1] / 255;
+                pixels[j + 2] = data[i + 2] / 255;
+            }
+            this.scene.setSkybox({
+                pixels,
+                width: canvas.width,
+                height: canvas.height,
+                brightness: this.skybox()?.brightness ?? 1,
+            });
+        } finally {
+            URL.revokeObjectURL(url);
+        }
+    }
+
+    onSkyboxBrightnessChange(value: number) {
+        this.scene.updateSkyboxBrightness(value);
+    }
+
+    clearSkybox() {
+        this.scene.setSkybox(null);
     }
 }
