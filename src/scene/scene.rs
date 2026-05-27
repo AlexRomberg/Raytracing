@@ -1,3 +1,4 @@
+use crate::scene::bvh::Bvh;
 use crate::scene::cloud::{march_clouds, Cloud};
 use crate::scene::light::Light;
 use crate::scene::material::Material;
@@ -9,6 +10,8 @@ use crate::util::hit::Hit;
 use crate::util::ray;
 use crate::util::vector::Vec3;
 use crate::util::{color::Color, ray::Ray};
+
+const MAX_DEPTH: u32 = 8;
 
 fn fresnel_schlick(eta1: f32, eta2: f32, cos_a: f32) -> f32 {
     let r0 = ((eta1 - eta2) / (eta1 + eta2)).powi(2);
@@ -22,13 +25,14 @@ pub fn get_pixel(
     height: f32,
     spheres: &[Sphere],
     triangles: &[Triangle],
+    bvh: &Bvh,
     lights: &[Light],
     camera: &Camera,
     skybox: Option<&Skybox>,
     clouds: &[Cloud],
 ) -> Color {
     let ray = camera.get_ray(x, y, width, height);
-    trace_ray(&ray, 15, spheres, triangles, lights, skybox, clouds)
+    trace_ray(&ray, MAX_DEPTH, spheres, triangles, bvh, lights, skybox, clouds)
 }
 
 fn trace_ray(
@@ -36,6 +40,7 @@ fn trace_ray(
     depth: u32,
     spheres: &[Sphere],
     triangles: &[Triangle],
+    bvh: &Bvh,
     lights: &[Light],
     skybox: Option<&Skybox>,
     clouds: &[Cloud],
@@ -44,12 +49,13 @@ fn trace_ray(
         return Color::new(0.0, 0.0, 0.0);
     }
 
-    let nearest_hit = get_hit(spheres, triangles, *ray);
+    let nearest_hit = get_hit(spheres, triangles, bvh, *ray);
     let scene_color = compute_scene_color(
         ray,
         depth,
         spheres,
         triangles,
+        bvh,
         lights,
         skybox,
         clouds,
@@ -69,6 +75,7 @@ fn compute_scene_color(
     depth: u32,
     spheres: &[Sphere],
     triangles: &[Triangle],
+    bvh: &Bvh,
     lights: &[Light],
     skybox: Option<&Skybox>,
     clouds: &[Cloud],
@@ -95,7 +102,7 @@ fn compute_scene_color(
         } => {
             let reflected_dir = Vec3::reflect(ray.direction, hit.normal);
             let reflected_ray = Ray::new(hit.point + offset_shift, reflected_dir);
-            let color = trace_ray(&reflected_ray, depth - 1, spheres, triangles, lights, skybox, clouds);
+            let color = trace_ray(&reflected_ray, depth - 1, spheres, triangles, bvh, lights, skybox, clouds);
             specular_color * color
         }
         Material::Dielectric { ior, absorption } => {
@@ -111,12 +118,12 @@ fn compute_scene_color(
             let reflected_dir = Vec3::reflect(i, n);
             let reflected_ray = Ray::new(hit.point + n * bias, reflected_dir);
             let reflected_color =
-                trace_ray(&reflected_ray, depth - 1, spheres, triangles, lights, skybox, clouds);
+                trace_ray(&reflected_ray, depth - 1, spheres, triangles, bvh, lights, skybox, clouds);
 
             if let Some(refracted_dir) = Vec3::refract(i, n, eta1, eta2) {
                 let refracted_ray = Ray::new(hit.point - n * bias, refracted_dir);
                 let refracted_color =
-                    trace_ray(&refracted_ray, depth - 1, spheres, triangles, lights, skybox, clouds);
+                    trace_ray(&refracted_ray, depth - 1, spheres, triangles, bvh, lights, skybox, clouds);
                 let cos_a = -i.dot(&n);
                 let f = fresnel_schlick(eta1, eta2, cos_a);
                 (reflected_color * f) + (refracted_color * (1.0 - f))
@@ -150,20 +157,9 @@ fn compute_scene_color(
                 }
 
                 if !in_shadow {
-                    for triangle in triangles {
-                        if let Some(intersection) = triangle.get_hit(&ray_to_light) {
-                            if intersection.lambda > 0.0001
-                                && intersection.lambda * intersection.lambda < distance_to_light_2
-                            {
-                                match intersection.material {
-                                    Material::Dielectric { .. } => continue,
-                                    _ => {
-                                        in_shadow = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
+                    let max_t = distance_to_light_2.sqrt();
+                    if bvh.any_blocking_hit(&ray_to_light, triangles, max_t) {
+                        in_shadow = true;
                     }
                 }
 
@@ -179,21 +175,12 @@ fn compute_scene_color(
     }
 }
 
-fn get_hit(spheres: &[Sphere], triangles: &[Triangle], ray: Ray) -> Option<Hit> {
-    let mut min_lambda = f32::INFINITY;
-    let mut nearest_hit: Option<Hit> = None;
+fn get_hit(spheres: &[Sphere], triangles: &[Triangle], bvh: &Bvh, ray: Ray) -> Option<Hit> {
+    let mut nearest_hit = bvh.closest_hit(&ray, triangles);
+    let mut min_lambda = nearest_hit.map(|h| h.lambda).unwrap_or(f32::INFINITY);
 
     for sphere in spheres {
         if let Some(hit) = sphere.get_hit(&ray) {
-            if hit.lambda > 0.00001 && hit.lambda < min_lambda {
-                min_lambda = hit.lambda;
-                nearest_hit = Some(hit);
-            }
-        }
-    }
-
-    for triangle in triangles {
-        if let Some(hit) = triangle.get_hit(&ray) {
             if hit.lambda > 0.00001 && hit.lambda < min_lambda {
                 min_lambda = hit.lambda;
                 nearest_hit = Some(hit);

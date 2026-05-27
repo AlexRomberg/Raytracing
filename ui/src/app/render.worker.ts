@@ -18,16 +18,17 @@ export interface SceneData {
   skyboxHeight: number;
   skyboxBrightness: number;
   cloudData: Float32Array;
+  samplesPerAxis: number;
 };
 
 addEventListener("message", async ({ data }: MessageEvent<SceneData>) => {
-  const { width, height, startRow, endRow, sphereData, triangleData, lightData, diffuseIntensity, skyboxPixels, skyboxWidth, skyboxHeight, skyboxBrightness, cloudData } = data;
+  const { width, height, startRow, endRow, sphereData, triangleData, lightData, diffuseIntensity, skyboxPixels, skyboxWidth, skyboxHeight, skyboxBrightness, cloudData, samplesPerAxis } = data;
 
   if (!initialized) {
     await init({ module_or_path: "/raytracer_bg.wasm" });
     initialized = true;
   }
 
-  const pixels = render_rows(width, height, startRow, endRow, sphereData, triangleData, lightData, diffuseIntensity, skyboxPixels, skyboxWidth, skyboxHeight, skyboxBrightness, cloudData);
+  const pixels = render_rows(width, height, startRow, endRow, sphereData, triangleData, lightData, diffuseIntensity, skyboxPixels, skyboxWidth, skyboxHeight, skyboxBrightness, cloudData, samplesPerAxis);
   postMessage({ startRow, endRow, pixels }, [pixels.buffer] as any);
 });

@@ -8,6 +8,7 @@ use scene::material::Material;
 use scene::scene::get_pixel;
 use scene::sphere::Sphere;
 
+use crate::scene::bvh::Bvh;
 use crate::scene::cloud::Cloud;
 use crate::scene::skybox::Skybox;
 use crate::scene::terrain::{generate as generate_terrain_mesh, TerrainConfig};
@@ -165,9 +166,11 @@ pub fn render_rows(
     skybox_height: u32,
     skybox_brightness: f32,
     cloud_data: &[f32],
+    samples_per_axis: u32,
 ) -> Vec<f32> {
     let spheres = parse_spheres(sphere_data, diffuse_intensity);
     let triangles = parse_triangles(triangle_data, diffuse_intensity);
+    let bvh = Bvh::build(&triangles);
     let lights = parse_lights(light_data);
     let clouds = parse_clouds(cloud_data);
     let skybox = Skybox::from_slice(
@@ -200,24 +203,38 @@ pub fn render_rows(
         width as f32 / height as f32,
     );
 
+    let n = samples_per_axis.max(1);
+    let sample_count = (n * n) as f32;
+    let inv_n = 1.0 / n as f32;
+
     for y in start_row..end_row {
         for x in 0..width {
             let flipped_y = height as f32 - y as f32 - 1.0;
-            let color = get_pixel(
-                x as f32,
-                flipped_y as f32,
-                width as f32,
-                height as f32,
-                &spheres,
-                &triangles,
-                &lights,
-                &camera,
-                skybox_ref,
-                &clouds,
-            );
-            pixels.push(color.r);
-            pixels.push(color.g);
-            pixels.push(color.b);
+            let mut accum = Color::new(0.0, 0.0, 0.0);
+            for sy in 0..n {
+                for sx in 0..n {
+                    let dx = (sx as f32 + 0.5) * inv_n - 0.5;
+                    let dy = (sy as f32 + 0.5) * inv_n - 0.5;
+                    let color = get_pixel(
+                        x as f32 + dx,
+                        flipped_y as f32 + dy,
+                        width as f32,
+                        height as f32,
+                        &spheres,
+                        &triangles,
+                        &bvh,
+                        &lights,
+                        &camera,
+                        skybox_ref,
+                        &clouds,
+                    );
+                    accum += color;
+                }
+            }
+            let avg = accum * (1.0 / sample_count);
+            pixels.push(avg.r);
+            pixels.push(avg.g);
+            pixels.push(avg.b);
             pixels.push(alpha);
         }
     }

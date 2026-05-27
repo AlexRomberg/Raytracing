@@ -1,3 +1,4 @@
+pub mod bvh;
 pub mod cloud;
 pub mod light;
 pub mod material;

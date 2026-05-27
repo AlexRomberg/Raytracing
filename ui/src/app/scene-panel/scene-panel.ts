@@ -30,6 +30,7 @@ export class ScenePanel {
     protected terrains = computed(() => this.sceneConfig().terrains);
     protected clouds = computed(() => this.sceneConfig().clouds);
     protected diffuseIntensity = computed(() => this.sceneConfig().diffuseIntensity);
+    protected samplesPerAxis = computed(() => this.sceneConfig().samplesPerAxis);
     protected skybox = computed(() => this.sceneConfig().skybox);
 
     toggle() {
@@ -38,6 +39,10 @@ export class ScenePanel {
 
     onDiffuseChange(value: number) {
         this.scene.update({ diffuseIntensity: value });
+    }
+
+    onSamplesPerAxisChange(value: number) {
+        this.scene.update({ samplesPerAxis: Math.max(1, value | 0) });
     }
 
     onSphereChange(index: number, field: string, value: number | string | Color | Vec3) {

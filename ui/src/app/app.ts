@@ -3,7 +3,7 @@ import { Scene, SceneConfig } from './services/scene';
 import { ScenePanel } from './scene-panel/scene-panel';
 import { SceneData } from './render.worker';
 
-const ROWS_PER_CHUNK = 2;
+const ROWS_PER_CHUNK = 5;
 
 @Component({
   selector: 'app-root',
@@ -156,6 +156,7 @@ export class App {
     const skyboxHeight = skybox?.height ?? 0;
     const skyboxBrightness = skybox?.brightness ?? 1;
     const cloudData = this.scene.buildCloudData(sceneConfig.clouds);
+    const samplesPerAxis = Math.max(1, sceneConfig.samplesPerAxis | 0);
 
     const chunks: { startRow: number; endRow: number }[] = [];
     for (let row = 0; row < height; row += ROWS_PER_CHUNK) {
@@ -185,7 +186,7 @@ export class App {
         }
       };
 
-      const sceneData: SceneData = { width, height, startRow: chunk.startRow, endRow: chunk.endRow, sphereData, triangleData, lightData, diffuseIntensity, skyboxPixels, skyboxWidth, skyboxHeight, skyboxBrightness, cloudData };
+      const sceneData: SceneData = { width, height, startRow: chunk.startRow, endRow: chunk.endRow, sphereData, triangleData, lightData, diffuseIntensity, skyboxPixels, skyboxWidth, skyboxHeight, skyboxBrightness, cloudData, samplesPerAxis };
 
       worker.postMessage(sceneData);
     };

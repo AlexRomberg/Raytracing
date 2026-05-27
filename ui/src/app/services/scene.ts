@@ -103,6 +103,7 @@ export interface CloudConfig {
 
 export interface SceneConfig {
   diffuseIntensity: number;
+  samplesPerAxis: number;
   spheres: SphereConfig[];
   objects: ObjectConfig[];
   terrains: TerrainConfig[];
@@ -114,6 +115,7 @@ export interface SceneConfig {
 
 const DEFAULT_SCENE: SceneConfig = {
   diffuseIntensity: 0.1,
+  samplesPerAxis: 1,
   spheres: [
     {
       name: 'Glass Ball',

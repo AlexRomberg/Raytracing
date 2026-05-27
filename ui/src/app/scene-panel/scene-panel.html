@@ -51,6 +51,28 @@
       <span class="text-xs text-zinc-500">{{ diffuseIntensity() }}</span>
     </div>
 
+    <!-- Anti-aliasing -->
+    <div>
+      <label class="block text-sm text-zinc-400 mb-1">Anti-aliasing (supersampling)</label>
+      <select
+        class="w-full bg-zinc-700/50 backdrop-blur-sm rounded border border-zinc-600 px-2 py-1 text-sm outline-none focus:border-blue-400 focus:bg-zinc-700 transition-colors"
+        [ngModel]="samplesPerAxis()"
+        (ngModelChange)="onSamplesPerAxisChange($event * 1)"
+      >
+        <option [ngValue]="1">Off (1 ray/pixel)</option>
+        <option [ngValue]="2">2× (4 rays/pixel)</option>
+        <option [ngValue]="3">3× (9 rays/pixel)</option>
+        <option [ngValue]="4">4× (16 rays/pixel)</option>
+        <option [ngValue]="5">5× (25 rays/pixel)</option>
+        <option [ngValue]="6">6× (36 rays/pixel)</option>
+        <option [ngValue]="7">7× (49 rays/pixel)</option>
+        <option [ngValue]="8">8× (64 rays/pixel)</option>
+      </select>
+      <span class="text-xs text-zinc-500"
+        >{{ samplesPerAxis() * samplesPerAxis() }} ray(s) per pixel</span
+      >
+    </div>
+
     <!-- Skybox -->
     <section>
       <div class="flex items-center justify-between mb-2">
@@ -777,7 +799,9 @@
           </div>
 
           <div class="space-y-1">
-            <span class="text-xs text-zinc-400 font-medium">Noise Scale ({{ cloud.noiseScale }})</span>
+            <span class="text-xs text-zinc-400 font-medium"
+              >Noise Scale ({{ cloud.noiseScale }})</span
+            >
             <input
               type="range"
               min="0.0005"
