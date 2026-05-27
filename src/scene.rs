@@ -3,4 +3,5 @@ pub mod material;
 pub mod scene;
 pub mod skybox;
 pub mod sphere;
+pub mod terrain;
 pub mod triangle;

@@ -51,7 +51,8 @@ fn trace_ray(
 
     let hit = nearest_hit.unwrap();
     let view_dir = (-ray.direction).normalized();
-    let offset_shift = hit.normal * 0.0005;
+    let bias = (hit.lambda.abs() * 1e-5).max(1e-3);
+    let offset_shift = hit.normal * bias;
 
     match hit.material {
         Material::Metal {
@@ -61,7 +62,6 @@ fn trace_ray(
             let reflected_dir = Vec3::reflect(ray.direction, hit.normal);
             let reflected_ray = Ray::new(hit.point + offset_shift, reflected_dir);
             let color = trace_ray(&reflected_ray, depth - 1, spheres, triangles, lights, skybox);
-            // NOTE (ARO): Ignore glossiness for now
             specular_color * color
         }
         Material::Dielectric { ior, absorption } => {
@@ -75,12 +75,12 @@ fn trace_ray(
             let n = hit.normal;
 
             let reflected_dir = Vec3::reflect(i, n);
-            let reflected_ray = Ray::new(hit.point + n * 0.0005, reflected_dir);
+            let reflected_ray = Ray::new(hit.point + n * bias, reflected_dir);
             let reflected_color =
                 trace_ray(&reflected_ray, depth - 1, spheres, triangles, lights, skybox);
 
             if let Some(refracted_dir) = Vec3::refract(i, n, eta1, eta2) {
-                let refracted_ray = Ray::new(hit.point - n * 0.0005, refracted_dir);
+                let refracted_ray = Ray::new(hit.point - n * bias, refracted_dir);
                 let refracted_color =
                     trace_ray(&refracted_ray, depth - 1, spheres, triangles, lights, skybox);
                 let cos_a = -i.dot(&n);

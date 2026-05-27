@@ -9,6 +9,7 @@ use scene::scene::get_pixel;
 use scene::sphere::Sphere;
 
 use crate::scene::skybox::Skybox;
+use crate::scene::terrain::{generate as generate_terrain_mesh, TerrainConfig};
 use crate::scene::triangle::Triangle;
 use crate::util::camera::Camera;
 use crate::util::color::Color;
@@ -81,6 +82,51 @@ fn parse_lights(data: &[f32]) -> Vec<Light> {
     data.chunks_exact(6)
         .map(|c| Light::new(Vec3::new(c[0], c[1], c[2]), Color::new(c[3], c[4], c[5])))
         .collect()
+}
+
+#[wasm_bindgen]
+pub fn generate_terrain(
+    grid_size: u32,
+    width: f32,
+    depth: f32,
+    height_scale: f32,
+    octaves: u32,
+    persistence: f32,
+    lacunarity: f32,
+    seed: u32,
+) -> Vec<f32> {
+    let mesh = generate_terrain_mesh(&TerrainConfig {
+        grid_size,
+        width,
+        depth,
+        height_scale,
+        octaves,
+        persistence,
+        lacunarity,
+        seed,
+    });
+
+    let vc = mesh.vertices.len();
+    let fc = mesh.faces.len();
+    let mut buf = Vec::with_capacity(2 + 3 * vc + 6 * fc);
+    buf.push(vc as f32);
+    buf.push(fc as f32);
+    for v in &mesh.vertices {
+        buf.push(v.x);
+        buf.push(v.y);
+        buf.push(v.z);
+    }
+    for f in &mesh.faces {
+        buf.push(f[0] as f32);
+        buf.push(f[1] as f32);
+        buf.push(f[2] as f32);
+    }
+    for c in &mesh.face_colors {
+        buf.push(c.r);
+        buf.push(c.g);
+        buf.push(c.b);
+    }
+    buf
 }
 
 #[wasm_bindgen(start)]

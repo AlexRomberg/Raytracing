@@ -1,7 +1,8 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Color, Scene, Vec3 } from '../services/scene';
+import { Color, Scene, TerrainConfig, Vec3 } from '../services/scene';
 import { ObjLoader } from '../services/obj-loader';
+import { TerrainGenerator } from '../services/terrain-generator';
 import { Vec3Input } from '../components/vec3-input/vec3-input';
 import { ColorInput } from '../components/color-input/color-input';
 
@@ -14,7 +15,9 @@ import { ColorInput } from '../components/color-input/color-input';
 export class ScenePanel {
     protected scene = inject(Scene);
     private objLoader = inject(ObjLoader);
+    private terrainGenerator = inject(TerrainGenerator);
     protected open = signal(false);
+    protected generatingTerrain = signal<number | null>(null);
     public rendering = input.required<boolean>();
     public render = output();
 
@@ -23,6 +26,7 @@ export class ScenePanel {
     protected lights = computed(() => this.sceneConfig().lights);
     protected triangles = computed(() => this.sceneConfig().triangles);
     protected objects = computed(() => this.sceneConfig().objects);
+    protected terrains = computed(() => this.sceneConfig().terrains);
     protected diffuseIntensity = computed(() => this.sceneConfig().diffuseIntensity);
     protected skybox = computed(() => this.sceneConfig().skybox);
 
@@ -129,5 +133,41 @@ export class ScenePanel {
 
     clearSkybox() {
         this.scene.setSkybox(null);
+    }
+
+    addTerrain() {
+        this.scene.addTerrain();
+    }
+
+    removeTerrain(index: number) {
+        this.scene.removeTerrain(index);
+    }
+
+    onTerrainChange(index: number, field: string, value: number | string | Color | Vec3) {
+        this.scene.updateTerrain(index, { [field]: value } as Partial<TerrainConfig>);
+    }
+
+    randomizeTerrainSeed(index: number) {
+        const seed = Math.floor(Math.random() * 0xffffffff) >>> 0;
+        this.scene.updateTerrain(index, { seed });
+    }
+
+    async generateTerrain(index: number, terrain: TerrainConfig) {
+        this.generatingTerrain.set(index);
+        try {
+            const mesh = await this.terrainGenerator.generate({
+                gridSize: terrain.gridSize,
+                width: terrain.width,
+                depth: terrain.depth,
+                heightScale: terrain.heightScale,
+                octaves: terrain.octaves,
+                persistence: terrain.persistence,
+                lacunarity: terrain.lacunarity,
+                seed: terrain.seed,
+            });
+            this.scene.updateTerrain(index, { mesh });
+        } finally {
+            this.generatingTerrain.set(null);
+        }
     }
 }

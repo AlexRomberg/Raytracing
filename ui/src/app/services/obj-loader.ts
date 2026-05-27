@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Vec3 } from './scene';
+import { Color, Vec3 } from './scene';
 
 export interface ParsedMesh {
   vertices: Vec3[];
   faces: [number, number, number][];
+  faceColors?: Color[];
 }
 
 @Injectable({ providedIn: 'root' })

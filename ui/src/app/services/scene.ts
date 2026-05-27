@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import type { ParsedMesh } from './obj-loader';
+import { TerrainGenerator } from './terrain-generator';
 
 export interface Vec3 {
   x: number;
@@ -54,6 +55,24 @@ export interface ObjectConfig {
   materialType?: MaterialType;
 }
 
+export interface TerrainConfig {
+  name: string;
+  gridSize: number;
+  width: number;
+  depth: number;
+  heightScale: number;
+  octaves: number;
+  persistence: number;
+  lacunarity: number;
+  seed: number;
+  offset: Vec3;
+  shininess: number;
+  diffuse: number;
+  specular: number;
+  materialType?: MaterialType;
+  mesh: ParsedMesh | null;
+}
+
 enum MaterialType {
   BlinnPhong = 0,
   Metal = 1,
@@ -75,26 +94,18 @@ export interface SceneConfig {
   diffuseIntensity: number;
   spheres: SphereConfig[];
   objects: ObjectConfig[];
+  terrains: TerrainConfig[];
   triangles: TriangleConfig[];
   lights: LightConfig[];
   skybox: SkyboxConfig | null;
 }
 
-const POINT_FBL: Vec3 = { x: -500, y: -500, z: 0 };
-const POINT_FBR: Vec3 = { x: 500, y: -500, z: 0 };
-const POINT_FTL: Vec3 = { x: -500, y: 500, z: 0 };
-const POINT_FTR: Vec3 = { x: 500, y: 500, z: 0 };
-const POINT_BBL: Vec3 = { x: -501, y: -500, z: 1000 };
-const POINT_BBR: Vec3 = { x: 501, y: -500, z: 1000 };
-const POINT_BTL: Vec3 = { x: -501, y: 500, z: 1000 };
-const POINT_BTR: Vec3 = { x: 501, y: 500, z: 1000 };
-
 const DEFAULT_SCENE: SceneConfig = {
   diffuseIntensity: 0.1,
   spheres: [
     {
-      name: 'Mirror Ball',
-      center: { x: 0, y: 0, z: 400 },
+      name: 'Glass Ball',
+      center: { x: 0, y: 50, z: 400 },
       radius: 120,
       color: { r: 1.0, g: 1.0, b: 1.0 },
       shininess: DEFAULT_SHININESS,
@@ -102,135 +113,176 @@ const DEFAULT_SCENE: SceneConfig = {
       specular: DEFAULT_SPECULAR,
       materialType: MaterialType.Dielectric,
     },
+    {
+      name: 'Moon',
+      center: { x: -1000, y: 1000, z: 3000 },
+      radius: 90,
+      color: { r: 1.0, g: 1.0, b: 1.0 },
+      shininess: 30,
+      diffuse: DEFAULT_DIFFUSE,
+      specular: DEFAULT_SPECULAR,
+      materialType: MaterialType.BlinnPhong,
+    },
   ],
   triangles: [
     {
-      name: 'L',
-      pointA: POINT_FTL,
-      pointB: POINT_FBL,
-      pointC: POINT_BBL,
-      color: { r: 0.1, g: 1, b: 1 },
+      name: 'Lake right',
+      pointA: { x: -100, y: -120, z: 0 },
+      pointB: { x: 100, y: -120, z: 0 },
+      pointC: { x: 100, y: -120, z: 400 },
+      color: { r: 1.0, g: 1.0, b: 1.0 },
       shininess: DEFAULT_SHININESS,
-      diffuse: DEFAULT_DIFFUSE,
-      specular: DEFAULT_SPECULAR,
-    },
-    {
-      name: 'L',
-      pointA: POINT_FTL,
-      pointB: POINT_BBL,
-      pointC: POINT_BTL,
-      color: { r: 0.1, g: 1, b: 1 },
-      shininess: DEFAULT_SHININESS,
-      diffuse: DEFAULT_DIFFUSE,
-      specular: DEFAULT_SPECULAR,
-    },
-    {
-      name: 'R',
-      pointA: POINT_FBR,
-      pointB: POINT_FTR,
-      pointC: POINT_BBR,
-      color: { r: 1, g: 0.1, b: 1 },
-      shininess: DEFAULT_SHININESS,
-      diffuse: DEFAULT_DIFFUSE,
-      specular: DEFAULT_SPECULAR,
-    },
-    {
-      name: 'R',
-      pointA: POINT_BBR,
-      pointB: POINT_FTR,
-      pointC: POINT_BTR,
-      color: { r: 1, g: 0.1, b: 1 },
-      shininess: DEFAULT_SHININESS,
-      diffuse: DEFAULT_DIFFUSE,
-      specular: DEFAULT_SPECULAR,
-    },
-    {
-      name: 'B',
-      pointA: POINT_FBL,
-      pointB: POINT_FBR,
-      pointC: POINT_BBR,
-      color: { r: 1, g: 1, b: 0.1 },
-      shininess: DEFAULT_SHININESS,
-      diffuse: DEFAULT_DIFFUSE,
-      specular: DEFAULT_SPECULAR,
-    },
-    {
-      name: 'B',
-      pointA: POINT_FBL,
-      pointB: POINT_BBR,
-      pointC: POINT_BBL,
-      color: { r: 1, g: 1, b: 0.1 },
-      shininess: DEFAULT_SHININESS,
-      diffuse: DEFAULT_DIFFUSE,
-      specular: DEFAULT_SPECULAR,
-    },
-    {
-      name: 'T',
-      pointA: POINT_FTR,
-      pointB: POINT_FTL,
-      pointC: POINT_BTR,
-      color: { r: 1, g: 1, b: 0.1 },
-      shininess: DEFAULT_SHININESS,
-      diffuse: DEFAULT_DIFFUSE,
-      specular: DEFAULT_SPECULAR,
-    },
-    {
-      name: 'T',
-      pointA: POINT_BTR,
-      pointB: POINT_FTL,
-      pointC: POINT_BTL,
-      color: { r: 1, g: 1, b: 0.1 },
-      shininess: DEFAULT_SHININESS,
-      diffuse: DEFAULT_DIFFUSE,
-      specular: DEFAULT_SPECULAR,
-    },
-    {
-      name: 'BACK',
-      pointA: POINT_BTR,
-      pointB: POINT_BBL,
-      pointC: POINT_BBR,
-      color: { r: 1, g: 1, b: 1 },
-      shininess: DEFAULT_SHININESS,
-      diffuse: DEFAULT_DIFFUSE,
-      specular: DEFAULT_SPECULAR,
+      diffuse: 0,
+      specular: 1.0,
       materialType: MaterialType.Metal,
     },
     {
-      name: 'BACK',
-      pointA: POINT_BTR,
-      pointB: POINT_BTL,
-      pointC: POINT_BBL,
-      color: { r: 1, g: 1, b: 1 },
+      name: 'Lake left',
+      pointA: { x: -100, y: -120, z: 0 },
+      pointB: { x: 100, y: -120, z: 400 },
+      pointC: { x: -100, y: -120, z: 400 },
+      color: { r: 1.0, g: 1.0, b: 1.0 },
       shininess: DEFAULT_SHININESS,
-      diffuse: DEFAULT_DIFFUSE,
-      specular: DEFAULT_SPECULAR,
+      diffuse: 0,
+      specular: 1.0,
       materialType: MaterialType.Metal,
     },
     {
-      name: 'FRONT',
-      pointA: POINT_FTR,
-      pointB: POINT_FBL,
-      pointC: POINT_FBR,
-      color: { r: 0.3, g: 0.3, b: 1 },
-      shininess: DEFAULT_SHININESS,
+      name: 'Cube Left - Inner Wall 1',
+      pointA: { x: -100, y: -210, z: 0 },
+      pointB: { x: -100, y: -110, z: 0 },
+      pointC: { x: -100, y: -110, z: 400 },
+      color: { r: 0.7, g: 0.6, b: 0.4 },
+      shininess: 3,
       diffuse: DEFAULT_DIFFUSE,
       specular: DEFAULT_SPECULAR,
+      materialType: MaterialType.BlinnPhong,
     },
     {
-      name: 'FRONT',
-      pointA: POINT_FTR,
-      pointB: POINT_FTL,
-      pointC: POINT_FBL,
-      color: { r: 0.3, g: 0.3, b: 1 },
-      shininess: DEFAULT_SHININESS,
+      name: 'Cube Left - Inner Wall 2',
+      pointA: { x: -100, y: -210, z: 0 },
+      pointB: { x: -100, y: -110, z: 400 },
+      pointC: { x: -100, y: -210, z: 400 },
+      color: { r: 0.7, g: 0.6, b: 0.4 },
+      shininess: 3,
       diffuse: DEFAULT_DIFFUSE,
       specular: DEFAULT_SPECULAR,
+      materialType: MaterialType.BlinnPhong,
+    },
+    {
+      name: 'Cube Left - Top 1',
+      pointA: { x: -500, y: -110, z: 0 },
+      pointB: { x: -100, y: -110, z: 0 },
+      pointC: { x: -100, y: -110, z: 400 },
+      color: { r: 0.7, g: 0.6, b: 0.4 },
+      shininess: 3,
+      diffuse: DEFAULT_DIFFUSE,
+      specular: DEFAULT_SPECULAR,
+      materialType: MaterialType.BlinnPhong,
+    },
+    {
+      name: 'Cube Left - Top 2',
+      pointA: { x: -500, y: -110, z: 0 },
+      pointB: { x: -100, y: -110, z: 400 },
+      pointC: { x: -500, y: -110, z: 400 },
+      color: { r: 0.7, g: 0.6, b: 0.4 },
+      shininess: 3,
+      diffuse: DEFAULT_DIFFUSE,
+      specular: DEFAULT_SPECULAR,
+      materialType: MaterialType.BlinnPhong,
+    },
+    {
+      name: 'Cube Right - Inner Wall 1',
+      pointA: { x: 100, y: -210, z: 0 },
+      pointB: { x: 100, y: -110, z: 400 },
+      pointC: { x: 100, y: -110, z: 0 },
+      color: { r: 0.7, g: 0.6, b: 0.4 },
+      shininess: 3,
+      diffuse: DEFAULT_DIFFUSE,
+      specular: DEFAULT_SPECULAR,
+      materialType: MaterialType.BlinnPhong,
+    },
+    {
+      name: 'Cube Right - Inner Wall 2',
+      pointA: { x: 100, y: -210, z: 0 },
+      pointB: { x: 100, y: -210, z: 400 },
+      pointC: { x: 100, y: -110, z: 400 },
+      color: { r: 0.7, g: 0.6, b: 0.4 },
+      shininess: 3,
+      diffuse: DEFAULT_DIFFUSE,
+      specular: DEFAULT_SPECULAR,
+      materialType: MaterialType.BlinnPhong,
+    },
+    {
+      name: 'Cube Right - Top 1',
+      pointA: { x: 100, y: -110, z: 0 },
+      pointB: { x: 500, y: -110, z: 0 },
+      pointC: { x: 500, y: -110, z: 400 },
+      color: { r: 0.7, g: 0.6, b: 0.4 },
+      shininess: 3,
+      diffuse: DEFAULT_DIFFUSE,
+      specular: DEFAULT_SPECULAR,
+      materialType: MaterialType.BlinnPhong,
+    },
+    {
+      name: 'Cube Right - Top 2',
+      pointA: { x: 100, y: -110, z: 0 },
+      pointB: { x: 500, y: -110, z: 400 },
+      pointC: { x: 100, y: -110, z: 400 },
+      color: { r: 0.7, g: 0.6, b: 0.4 },
+      shininess: 3,
+      diffuse: DEFAULT_DIFFUSE,
+      specular: DEFAULT_SPECULAR,
+      materialType: MaterialType.BlinnPhong,
     },
   ],
   lights: [
-    { name: 'Main light', center: { x: 0, y: 0, z: 350 }, color: { r: 1, g: 1, b: 1 } },
+    { name: 'Sun', center: { x: 5000, y: 250, z: 5000 }, color: { r: 1, g: 0.65, b: 0.55 } },
+    { name: 'Moon', center: { x: -100, y: 1000, z: 0 }, color: { r: 0.15, g: 0.2, b: 0.35 } },
   ],
-  objects: [],
+  objects: [
+    {
+      color: { r: 0.2, g: 0.2, b: 0.2 },
+      name: 'Lantern left',
+      mesh: null,
+      offset: { x: -150, y: -110, z: 300 },
+      scale: 60,
+      shininess: 0.1,
+      diffuse: 0.5,
+      specular: 0.4,
+      materialType: MaterialType.BlinnPhong
+    },
+    {
+      color: { r: 0.2, g: 0.2, b: 0.2 },
+      name: 'Lantern right',
+      mesh: null,
+      offset: { x: 150, y: -110, z: 300 },
+      scale: 60,
+      shininess: 0.1,
+      diffuse: 0.5,
+      specular: 0.4,
+      materialType: MaterialType.BlinnPhong
+    },
+  ],
+  terrains: [
+    {
+      name: 'Mountain range',
+      gridSize: 150,
+      width: 2000,
+      depth: 390,
+      heightScale: 400,
+      octaves: 5,
+      persistence: 0.5,
+      lacunarity: 2.5,
+      seed: 770983921,
+      offset: { x: 0, y: -150, z: 700 },
+      shininess: 5,
+      diffuse: DEFAULT_DIFFUSE,
+      specular: DEFAULT_SPECULAR,
+      materialType: MaterialType.BlinnPhong,
+      mesh: null,
+    },
+  ],
   skybox: null,
 };
 
@@ -239,6 +291,30 @@ const DEFAULT_SCENE: SceneConfig = {
 })
 export class Scene {
   scene = signal<SceneConfig>(structuredClone(DEFAULT_SCENE));
+
+  constructor(private terrainGenerator: TerrainGenerator) {
+    this.initializeTerrainMeshes();
+  }
+
+  private async initializeTerrainMeshes(): Promise<void> {
+    const currentScene = this.scene();
+    for (let i = 0; i < currentScene.terrains.length; i++) {
+      const terrain = currentScene.terrains[i];
+      if (!terrain.mesh) {
+        const mesh = await this.terrainGenerator.generate({
+          gridSize: terrain.gridSize,
+          width: terrain.width,
+          depth: terrain.depth,
+          heightScale: terrain.heightScale,
+          octaves: terrain.octaves,
+          persistence: terrain.persistence,
+          lacunarity: terrain.lacunarity,
+          seed: terrain.seed,
+        });
+        this.updateTerrain(i, { mesh });
+      }
+    }
+  }
 
   update(partial: Partial<SceneConfig>) {
     this.scene.update(s => ({ ...s, ...partial }));
@@ -363,6 +439,60 @@ export class Scene {
     }));
   }
 
+  updateTerrain(index: number, partial: Partial<TerrainConfig>) {
+    this.scene.update(s => {
+      const terrains = s.terrains.map((t, i) => i === index ? { ...t, ...partial } : t);
+      return { ...s, terrains };
+    });
+  }
+
+  addTerrain() {
+    this.scene.update(s => ({
+      ...s,
+      terrains: [
+        ...s.terrains,
+        {
+          name: `Terrain ${s.terrains.length + 1}`,
+          gridSize: 128,
+          width: 1200,
+          depth: 1200,
+          heightScale: 300,
+          octaves: 5,
+          persistence: 0.5,
+          lacunarity: 2.0,
+          seed: Math.floor(Math.random() * 0xffffffff) >>> 0,
+          offset: { x: 0, y: -300, z: 700 },
+          shininess: DEFAULT_SHININESS,
+          diffuse: DEFAULT_DIFFUSE,
+          specular: DEFAULT_SPECULAR,
+          mesh: null,
+        },
+      ],
+    }));
+
+    const newTerrainIndex = this.scene().terrains.length - 1;
+    const newTerrain = this.scene().terrains[newTerrainIndex];
+    this.terrainGenerator.generate({
+      gridSize: newTerrain.gridSize,
+      width: newTerrain.width,
+      depth: newTerrain.depth,
+      heightScale: newTerrain.heightScale,
+      octaves: newTerrain.octaves,
+      persistence: newTerrain.persistence,
+      lacunarity: newTerrain.lacunarity,
+      seed: newTerrain.seed,
+    }).then(mesh => {
+      this.updateTerrain(newTerrainIndex, { mesh });
+    });
+  }
+
+  removeTerrain(index: number) {
+    this.scene.update(s => ({
+      ...s,
+      terrains: s.terrains.filter((_, i) => i !== index),
+    }));
+  }
+
   public buildSphereData(spheres: SphereConfig[]): Float32Array {
     const data = new Float32Array(spheres.length * 11);
     for (let i = 0; i < spheres.length; i++) {
@@ -379,10 +509,17 @@ export class Scene {
     return data;
   }
 
-  buildTriangleData(triangles: TriangleConfig[], objects: ObjectConfig[] = []): Float32Array {
+  buildTriangleData(
+    triangles: TriangleConfig[],
+    objects: ObjectConfig[] = [],
+    terrains: TerrainConfig[] = [],
+  ): Float32Array {
     let meshTriCount = 0;
     for (const obj of objects) {
       if (obj.mesh) meshTriCount += obj.mesh.faces.length;
+    }
+    for (const t of terrains) {
+      if (t.mesh) meshTriCount += t.mesh.faces.length;
     }
     const total = triangles.length + meshTriCount;
     const data = new Float32Array(total * 16);
@@ -413,40 +550,74 @@ export class Scene {
     }
 
     let cursor = triangles.length;
-    for (const obj of objects) {
-      if (!obj.mesh) continue;
-      const { vertices, faces } = obj.mesh;
-      const s = obj.scale;
-      const ox = obj.offset.x;
-      const oy = obj.offset.y;
-      const oz = obj.offset.z;
-      for (const [ia, ib, ic] of faces) {
+    const writeMesh = (
+      mesh: ParsedMesh,
+      scale: number,
+      offset: Vec3,
+      fallback: Color,
+      shininess: number,
+      diffuse: number,
+      specular: number,
+      materialType: number,
+    ) => {
+      const { vertices, faces, faceColors } = mesh;
+      for (let fi = 0; fi < faces.length; fi++) {
+        const [ia, ib, ic] = faces[fi];
         const a = vertices[ia];
         const b = vertices[ib];
         const c = vertices[ic];
+        const tc = faceColors?.[fi] ?? fallback;
         const o = cursor * 16;
-        data[o] = a.x * s + ox;
-        data[o + 1] = a.y * s + oy;
-        data[o + 2] = -(a.z * s + oz);
+        data[o] = a.x * scale + offset.x;
+        data[o + 1] = a.y * scale + offset.y;
+        data[o + 2] = -(a.z * scale + offset.z);
 
-        data[o + 3] = b.x * s + ox;
-        data[o + 4] = b.y * s + oy;
-        data[o + 5] = -(b.z * s + oz);
+        data[o + 3] = b.x * scale + offset.x;
+        data[o + 4] = b.y * scale + offset.y;
+        data[o + 5] = -(b.z * scale + offset.z);
 
-        data[o + 6] = c.x * s + ox;
-        data[o + 7] = c.y * s + oy;
-        data[o + 8] = -(c.z * s + oz);
+        data[o + 6] = c.x * scale + offset.x;
+        data[o + 7] = c.y * scale + offset.y;
+        data[o + 8] = -(c.z * scale + offset.z);
 
-        data[o + 9] = obj.color.r;
-        data[o + 10] = obj.color.g;
-        data[o + 11] = obj.color.b;
+        data[o + 9] = tc.r;
+        data[o + 10] = tc.g;
+        data[o + 11] = tc.b;
 
-        data[o + 12] = obj.shininess;
-        data[o + 13] = obj.diffuse;
-        data[o + 14] = obj.specular;
-        data[o + 15] = obj.materialType ?? 0;
+        data[o + 12] = shininess;
+        data[o + 13] = diffuse;
+        data[o + 14] = specular;
+        data[o + 15] = materialType;
         cursor++;
       }
+    };
+
+    for (const obj of objects) {
+      if (!obj.mesh) continue;
+      writeMesh(
+        obj.mesh,
+        obj.scale,
+        obj.offset,
+        obj.color,
+        obj.shininess,
+        obj.diffuse,
+        obj.specular,
+        obj.materialType ?? 0,
+      );
+    }
+
+    for (const terrain of terrains) {
+      if (!terrain.mesh) continue;
+      writeMesh(
+        terrain.mesh,
+        1,
+        terrain.offset,
+        { r: 1, g: 1, b: 1 },
+        terrain.shininess,
+        terrain.diffuse,
+        terrain.specular,
+        terrain.materialType ?? 0,
+      );
     }
 
     return data;

@@ -3,7 +3,7 @@ import { Scene, SceneConfig } from './services/scene';
 import { ScenePanel } from './scene-panel/scene-panel';
 import { SceneData } from './render.worker';
 
-const ROWS_PER_CHUNK = 10;
+const ROWS_PER_CHUNK = 2;
 
 @Component({
   selector: 'app-root',
@@ -23,7 +23,7 @@ export class App {
   private scene = inject(Scene);
 
   constructor() {
-    const numWorkers = navigator.hardwareConcurrency || 4;
+    const numWorkers = (navigator.hardwareConcurrency || 4) + 1;
     for (let i = 0; i < numWorkers; i++) {
       this.workers.push(new Worker(new URL('./render.worker', import.meta.url), { type: 'module' }));
     }
@@ -133,7 +133,7 @@ export class App {
     gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, 16, 8);
 
     const sphereData = this.scene.buildSphereData(sceneConfig.spheres);
-    const triangleData = this.scene.buildTriangleData(sceneConfig.triangles, sceneConfig.objects);
+    const triangleData = this.scene.buildTriangleData(sceneConfig.triangles, sceneConfig.objects, sceneConfig.terrains);
     const lightData = this.scene.buildLightData(sceneConfig.lights);
     const diffuseIntensity = sceneConfig.diffuseIntensity;
     const skybox = sceneConfig.skybox;
