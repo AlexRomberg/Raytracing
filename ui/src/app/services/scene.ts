@@ -90,6 +90,17 @@ export interface SkyboxConfig {
   brightness: number;
 }
 
+export interface CloudConfig {
+  name: string;
+  center: Vec3;
+  size: Vec3;
+  density: number;
+  noiseScale: number;
+  octaves: number;
+  seed: number;
+  color: Color;
+}
+
 export interface SceneConfig {
   diffuseIntensity: number;
   spheres: SphereConfig[];
@@ -97,6 +108,7 @@ export interface SceneConfig {
   terrains: TerrainConfig[];
   triangles: TriangleConfig[];
   lights: LightConfig[];
+  clouds: CloudConfig[];
   skybox: SkyboxConfig | null;
 }
 
@@ -282,6 +294,28 @@ const DEFAULT_SCENE: SceneConfig = {
       materialType: MaterialType.BlinnPhong,
       mesh: null,
     },
+  ],
+  clouds: [
+    {
+      name: 'Cloud right',
+      center: { x: 1000, y: 300, z: 1500 },
+      size: { x: 1000, y: 600, z: 600 },
+      density: 10,
+      noiseScale: 0.01,
+      octaves: 5,
+      seed: 2396838568,
+      color: { r: 0.6, g: 0.5, b: 0.5 },
+    },
+    {
+      name: 'Cloud left',
+      center: { x: -1000, y: 100, z: 1500 },
+      size: { x: 1300, y: 600, z: 600 },
+      density: 10,
+      noiseScale: 0.01,
+      octaves: 5,
+      seed: 2093842823,
+      color: { r: 0.6, g: 0.5, b: 0.5 },
+    }
   ],
   skybox: null,
 };
@@ -491,6 +525,61 @@ export class Scene {
       ...s,
       terrains: s.terrains.filter((_, i) => i !== index),
     }));
+  }
+
+  updateCloud(index: number, partial: Partial<CloudConfig>) {
+    this.scene.update(s => {
+      const clouds = s.clouds.map((c, i) => i === index ? { ...c, ...partial } : c);
+      return { ...s, clouds };
+    });
+  }
+
+  addCloud() {
+    this.scene.update(s => ({
+      ...s,
+      clouds: [
+        ...s.clouds,
+        {
+          name: `Cloud ${s.clouds.length + 1}`,
+          center: { x: 0, y: 300, z: 1500 },
+          size: { x: 2000, y: 400, z: 800 },
+          density: 4.0,
+          noiseScale: 0.004,
+          octaves: 4,
+          seed: Math.floor(Math.random() * 0xffffffff) >>> 0,
+          color: { r: 1, g: 1, b: 1 },
+        },
+      ],
+    }));
+  }
+
+  removeCloud(index: number) {
+    this.scene.update(s => ({
+      ...s,
+      clouds: s.clouds.filter((_, i) => i !== index),
+    }));
+  }
+
+  buildCloudData(clouds: CloudConfig[]): Float32Array {
+    const data = new Float32Array(clouds.length * 13);
+    for (let i = 0; i < clouds.length; i++) {
+      const c = clouds[i];
+      const o = i * 13;
+      data[o] = c.center.x;
+      data[o + 1] = c.center.y;
+      data[o + 2] = -c.center.z;
+      data[o + 3] = c.size.x;
+      data[o + 4] = c.size.y;
+      data[o + 5] = c.size.z;
+      data[o + 6] = c.density;
+      data[o + 7] = c.noiseScale;
+      data[o + 8] = c.octaves;
+      data[o + 9] = c.seed;
+      data[o + 10] = c.color.r;
+      data[o + 11] = c.color.g;
+      data[o + 12] = c.color.b;
+    }
+    return data;
   }
 
   public buildSphereData(spheres: SphereConfig[]): Float32Array {

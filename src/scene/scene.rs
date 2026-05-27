@@ -1,3 +1,4 @@
+use crate::scene::cloud::{march_clouds, Cloud};
 use crate::scene::light::Light;
 use crate::scene::material::Material;
 use crate::scene::skybox::Skybox;
@@ -24,9 +25,10 @@ pub fn get_pixel(
     lights: &[Light],
     camera: &Camera,
     skybox: Option<&Skybox>,
+    clouds: &[Cloud],
 ) -> Color {
     let ray = camera.get_ray(x, y, width, height);
-    trace_ray(&ray, 15, spheres, triangles, lights, skybox)
+    trace_ray(&ray, 15, spheres, triangles, lights, skybox, clouds)
 }
 
 fn trace_ray(
@@ -36,20 +38,52 @@ fn trace_ray(
     triangles: &[Triangle],
     lights: &[Light],
     skybox: Option<&Skybox>,
+    clouds: &[Cloud],
 ) -> Color {
     if depth == 0 {
         return Color::new(0.0, 0.0, 0.0);
     }
 
     let nearest_hit = get_hit(spheres, triangles, *ray);
-    if nearest_hit.is_none() {
-        return match skybox {
-            Some(sb) => sb.sample(ray.direction),
-            None => Color::new(0.0, 0.0, 0.0),
-        };
-    }
+    let scene_color = compute_scene_color(
+        ray,
+        depth,
+        spheres,
+        triangles,
+        lights,
+        skybox,
+        clouds,
+        nearest_hit,
+    );
 
-    let hit = nearest_hit.unwrap();
+    if clouds.is_empty() {
+        return scene_color;
+    }
+    let t_max = nearest_hit.map(|h| h.lambda).unwrap_or(f32::INFINITY);
+    let (cloud_color, transmittance) = march_clouds(ray, t_max, clouds);
+    cloud_color + scene_color * transmittance
+}
+
+fn compute_scene_color(
+    ray: &Ray,
+    depth: u32,
+    spheres: &[Sphere],
+    triangles: &[Triangle],
+    lights: &[Light],
+    skybox: Option<&Skybox>,
+    clouds: &[Cloud],
+    nearest_hit: Option<Hit>,
+) -> Color {
+    let hit = match nearest_hit {
+        Some(h) => h,
+        None => {
+            return match skybox {
+                Some(sb) => sb.sample(ray.direction),
+                None => Color::new(0.0, 0.0, 0.0),
+            };
+        }
+    };
+
     let view_dir = (-ray.direction).normalized();
     let bias = (hit.lambda.abs() * 1e-5).max(1e-3);
     let offset_shift = hit.normal * bias;
@@ -61,7 +95,7 @@ fn trace_ray(
         } => {
             let reflected_dir = Vec3::reflect(ray.direction, hit.normal);
             let reflected_ray = Ray::new(hit.point + offset_shift, reflected_dir);
-            let color = trace_ray(&reflected_ray, depth - 1, spheres, triangles, lights, skybox);
+            let color = trace_ray(&reflected_ray, depth - 1, spheres, triangles, lights, skybox, clouds);
             specular_color * color
         }
         Material::Dielectric { ior, absorption } => {
@@ -77,12 +111,12 @@ fn trace_ray(
             let reflected_dir = Vec3::reflect(i, n);
             let reflected_ray = Ray::new(hit.point + n * bias, reflected_dir);
             let reflected_color =
-                trace_ray(&reflected_ray, depth - 1, spheres, triangles, lights, skybox);
+                trace_ray(&reflected_ray, depth - 1, spheres, triangles, lights, skybox, clouds);
 
             if let Some(refracted_dir) = Vec3::refract(i, n, eta1, eta2) {
                 let refracted_ray = Ray::new(hit.point - n * bias, refracted_dir);
                 let refracted_color =
-                    trace_ray(&refracted_ray, depth - 1, spheres, triangles, lights, skybox);
+                    trace_ray(&refracted_ray, depth - 1, spheres, triangles, lights, skybox, clouds);
                 let cos_a = -i.dot(&n);
                 let f = fresnel_schlick(eta1, eta2, cos_a);
                 (reflected_color * f) + (refracted_color * (1.0 - f))

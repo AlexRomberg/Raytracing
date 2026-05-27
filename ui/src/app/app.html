@@ -1,4 +1,4 @@
 <div class="w-svw h-svh" #raytracerContainer>
   <canvas #raytracerCanvas></canvas>
 </div>
-<app-scene-panel [rendering]="rendering()" (render)="render()" />
+<app-scene-panel [rendering]="rendering()" (render)="render()" (save)="saveImage()" />

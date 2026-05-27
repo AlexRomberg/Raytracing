@@ -8,6 +8,7 @@ use scene::material::Material;
 use scene::scene::get_pixel;
 use scene::sphere::Sphere;
 
+use crate::scene::cloud::Cloud;
 use crate::scene::skybox::Skybox;
 use crate::scene::terrain::{generate as generate_terrain_mesh, TerrainConfig};
 use crate::scene::triangle::Triangle;
@@ -74,6 +75,20 @@ fn parse_triangles(data: &[f32], ambient_intensity: f32) -> Vec<Triangle> {
                 Vec3::new(c[6], c[7], c[8]),
                 material,
             )
+        })
+        .collect()
+}
+
+fn parse_clouds(data: &[f32]) -> Vec<Cloud> {
+    data.chunks_exact(13)
+        .map(|c| Cloud {
+            center: Vec3::new(c[0], c[1], c[2]),
+            size: Vec3::new(c[3], c[4], c[5]),
+            density: c[6],
+            noise_scale: c[7],
+            octaves: c[8] as u32,
+            seed: c[9] as u32,
+            color: Color::new(c[10], c[11], c[12]),
         })
         .collect()
 }
@@ -149,10 +164,12 @@ pub fn render_rows(
     skybox_width: u32,
     skybox_height: u32,
     skybox_brightness: f32,
+    cloud_data: &[f32],
 ) -> Vec<f32> {
     let spheres = parse_spheres(sphere_data, diffuse_intensity);
     let triangles = parse_triangles(triangle_data, diffuse_intensity);
     let lights = parse_lights(light_data);
+    let clouds = parse_clouds(cloud_data);
     let skybox = Skybox::from_slice(
         skybox_pixels,
         skybox_width,
@@ -196,6 +213,7 @@ pub fn render_rows(
                 &lights,
                 &camera,
                 skybox_ref,
+                &clouds,
             );
             pixels.push(color.r);
             pixels.push(color.g);

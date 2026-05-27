@@ -1,15 +1,25 @@
 @if (open()) {
-  <button
-    class="fixed top-6 right-16 z-50 px-4 h-8 rounded-lg shadow-lg backdrop-blur-sm text-sm font-semibold text-white cursor-pointer transition-colors flex items-center"
-    [class.bg-blue-600]="!rendering()"
-    [class.hover:bg-blue-500]="!rendering()"
-    [class.bg-zinc-700]="rendering()"
-    [class.cursor-wait]="rendering()"
-    [disabled]="rendering()"
-    (click)="render.emit()"
-  >
-    {{ rendering() ? 'Rendering…' : 'Render' }}
-  </button>
+  <div class="fixed top-6 right-16 z-50 flex gap-2 items-center">
+    <button
+      class="px-4 h-8 rounded-lg shadow-lg backdrop-blur-sm text-sm font-semibold text-white cursor-pointer transition-colors flex items-center bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:cursor-not-allowed"
+      [disabled]="rendering()"
+      title="Save image as PNG"
+      (click)="save.emit()"
+    >
+      Save
+    </button>
+    <button
+      class="px-4 h-8 rounded-lg shadow-lg backdrop-blur-sm text-sm font-semibold text-white cursor-pointer transition-colors flex items-center"
+      [class.bg-blue-600]="!rendering()"
+      [class.hover:bg-blue-500]="!rendering()"
+      [class.bg-zinc-700]="rendering()"
+      [class.cursor-wait]="rendering()"
+      [disabled]="rendering()"
+      (click)="render.emit()"
+    >
+      {{ rendering() ? 'Rendering…' : 'Render' }}
+    </button>
+  </div>
 }
 <button
   class="fixed top-6 right-6 z-50 bg-zinc-800/60 hover:bg-zinc-700/80 text-white p-3 rounded-lg shadow-lg backdrop-blur-sm cursor-pointer text-sm w-8 h-8 flex items-center justify-center"
@@ -702,6 +712,121 @@
             >
               {{ generatingTerrain() === $index ? 'Generating…' : 'Generate' }}
             </button>
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- Clouds -->
+    <section>
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-semibold">Clouds</h3>
+        <button
+          class="text-xs bg-green-600 hover:bg-green-500 px-2 py-1 rounded cursor-pointer"
+          (click)="addCloud()"
+        >
+          + Add
+        </button>
+      </div>
+
+      @for (cloud of clouds(); track $index) {
+        <div class="mb-4 p-4 bg-zinc-800/80 rounded-lg border border-zinc-700 space-y-4 shadow-lg">
+          <div class="flex items-center justify-between">
+            <input
+              type="text"
+              class="bg-transparent text-sm font-semibold w-full outline-none border-b border-transparent focus:border-blue-400 text-zinc-100 placeholder-zinc-500 transition-colors"
+              [ngModel]="cloud.name"
+              (ngModelChange)="onCloudChange($index, 'name', $event)"
+              placeholder="Cloud name"
+            />
+            <button
+              class="text-red-400 hover:text-red-300 bg-red-400/10 hover:bg-red-400/20 px-2 py-1 rounded text-xs ml-2 cursor-pointer shrink-0 transition-colors"
+              (click)="removeCloud($index)"
+            >
+              Remove
+            </button>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Center</span>
+            <app-vec3-input
+              [value]="cloud.center"
+              (valueChange)="onCloudChange($index, 'center', $event)"
+            ></app-vec3-input>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Size (W × H × D)</span>
+            <app-vec3-input
+              [value]="cloud.size"
+              (valueChange)="onCloudChange($index, 'size', $event)"
+            ></app-vec3-input>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Density ({{ cloud.density }})</span>
+            <input
+              type="range"
+              min="0"
+              max="20"
+              step="0.1"
+              class="w-full"
+              [ngModel]="cloud.density"
+              (ngModelChange)="onCloudChange($index, 'density', $event * 1)"
+            />
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Noise Scale ({{ cloud.noiseScale }})</span>
+            <input
+              type="range"
+              min="0.0005"
+              max="0.02"
+              step="0.0005"
+              class="w-full"
+              [ngModel]="cloud.noiseScale"
+              (ngModelChange)="onCloudChange($index, 'noiseScale', $event * 1)"
+            />
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Octaves ({{ cloud.octaves }})</span>
+            <input
+              type="range"
+              min="1"
+              max="6"
+              step="1"
+              class="w-full"
+              [ngModel]="cloud.octaves"
+              (ngModelChange)="onCloudChange($index, 'octaves', $event * 1)"
+            />
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Seed</span>
+            <div class="flex gap-2">
+              <input
+                type="number"
+                class="flex-1 bg-zinc-700/50 backdrop-blur-sm rounded border border-zinc-600 px-2 py-1 text-sm outline-none focus:border-blue-400 focus:bg-zinc-700 transition-colors"
+                [ngModel]="cloud.seed"
+                (ngModelChange)="onCloudChange($index, 'seed', $event)"
+              />
+              <button
+                class="text-xs bg-zinc-700 hover:bg-zinc-600 px-2 py-1 rounded cursor-pointer transition-colors"
+                title="Randomize seed"
+                (click)="randomizeCloudSeed($index)"
+              >
+                🎲
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-zinc-400 font-medium">Color</span>
+            <app-color-input
+              [value]="cloud.color"
+              (valueChange)="onCloudChange($index, 'color', $event)"
+            ></app-color-input>
           </div>
         </div>
       }

@@ -50,6 +50,19 @@ export class App {
     this.renderTick.update(t => t + 1);
   }
 
+  saveImage() {
+    const canvas = this.canvas().nativeElement;
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `raytracer-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  }
+
   private renderParallel(width: number, height: number, canvas: HTMLCanvasElement, sceneConfig: SceneConfig) {
     let gl = (canvas as any).__gl as WebGL2RenderingContext;
     let program = (canvas as any).__program as WebGLProgram;
@@ -60,6 +73,7 @@ export class App {
         antialias: false,
         depth: false,
         premultipliedAlpha: false,
+        preserveDrawingBuffer: true,
         // @ts-ignore
         colorSpace: 'display-p3'
       }) as WebGL2RenderingContext;
@@ -141,6 +155,7 @@ export class App {
     const skyboxWidth = skybox?.width ?? 0;
     const skyboxHeight = skybox?.height ?? 0;
     const skyboxBrightness = skybox?.brightness ?? 1;
+    const cloudData = this.scene.buildCloudData(sceneConfig.clouds);
 
     const chunks: { startRow: number; endRow: number }[] = [];
     for (let row = 0; row < height; row += ROWS_PER_CHUNK) {
@@ -170,7 +185,7 @@ export class App {
         }
       };
 
-      const sceneData: SceneData = { width, height, startRow: chunk.startRow, endRow: chunk.endRow, sphereData, triangleData, lightData, diffuseIntensity, skyboxPixels, skyboxWidth, skyboxHeight, skyboxBrightness };
+      const sceneData: SceneData = { width, height, startRow: chunk.startRow, endRow: chunk.endRow, sphereData, triangleData, lightData, diffuseIntensity, skyboxPixels, skyboxWidth, skyboxHeight, skyboxBrightness, cloudData };
 
       worker.postMessage(sceneData);
     };

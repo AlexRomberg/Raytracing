@@ -1,6 +1,6 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Color, Scene, TerrainConfig, Vec3 } from '../services/scene';
+import { CloudConfig, Color, Scene, TerrainConfig, Vec3 } from '../services/scene';
 import { ObjLoader } from '../services/obj-loader';
 import { TerrainGenerator } from '../services/terrain-generator';
 import { Vec3Input } from '../components/vec3-input/vec3-input';
@@ -20,6 +20,7 @@ export class ScenePanel {
     protected generatingTerrain = signal<number | null>(null);
     public rendering = input.required<boolean>();
     public render = output();
+    public save = output();
 
     protected sceneConfig = this.scene.scene;
     protected spheres = computed(() => this.sceneConfig().spheres);
@@ -27,6 +28,7 @@ export class ScenePanel {
     protected triangles = computed(() => this.sceneConfig().triangles);
     protected objects = computed(() => this.sceneConfig().objects);
     protected terrains = computed(() => this.sceneConfig().terrains);
+    protected clouds = computed(() => this.sceneConfig().clouds);
     protected diffuseIntensity = computed(() => this.sceneConfig().diffuseIntensity);
     protected skybox = computed(() => this.sceneConfig().skybox);
 
@@ -150,6 +152,23 @@ export class ScenePanel {
     randomizeTerrainSeed(index: number) {
         const seed = Math.floor(Math.random() * 0xffffffff) >>> 0;
         this.scene.updateTerrain(index, { seed });
+    }
+
+    addCloud() {
+        this.scene.addCloud();
+    }
+
+    removeCloud(index: number) {
+        this.scene.removeCloud(index);
+    }
+
+    onCloudChange(index: number, field: string, value: number | string | Color | Vec3) {
+        this.scene.updateCloud(index, { [field]: value } as Partial<CloudConfig>);
+    }
+
+    randomizeCloudSeed(index: number) {
+        const seed = Math.floor(Math.random() * 0xffffffff) >>> 0;
+        this.scene.updateCloud(index, { seed });
     }
 
     async generateTerrain(index: number, terrain: TerrainConfig) {
