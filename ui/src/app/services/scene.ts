@@ -237,7 +237,7 @@ const DEFAULT_SCENE: SceneConfig = {
     },
   ],
   lights: [
-    { name: 'Sun', center: { x: 5000, y: 250, z: 5000 }, color: { r: 1, g: 0.65, b: 0.55 } },
+    { name: 'Sun', center: { x: 1000, y: 50, z: 1000 }, color: { r: 1, g: 0.65, b: 0.55 } },
     { name: 'Moon', center: { x: -100, y: 1000, z: 0 }, color: { r: 0.15, g: 0.2, b: 0.35 } },
   ],
   objects: [
