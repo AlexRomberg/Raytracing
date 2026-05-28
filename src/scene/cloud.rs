@@ -73,7 +73,7 @@ impl Cloud {
     }
 }
 
-const MARCH_STEPS: u32 = 48;
+const MARCH_STEPS: u32 = 50;
 const MIN_TRANSMITTANCE: f32 = 0.01;
 
 pub fn march_clouds(ray: &Ray, max_t: f32, clouds: &[Cloud]) -> (Color, f32) {

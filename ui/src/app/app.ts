@@ -140,7 +140,6 @@ export class App {
     const posLoc = gl.getAttribLocation(program, 'a_position');
     const texLoc = gl.getAttribLocation(program, 'a_texCoord');
 
-    // We already have buffer bound
     gl.enableVertexAttribArray(posLoc);
     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 16, 0);
     gl.enableVertexAttribArray(texLoc);
