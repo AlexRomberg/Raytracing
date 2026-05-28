@@ -6,7 +6,8 @@ Build in Rust, compiled to WASM, run in Angular.
 Why? ¯\\\_(ツ)\_/¯ Why not.
 
 # Final scene
-![preview](assets/result.png)
+![preview](assets/result_low.webp)
+[original](assets/result.png)
 
 # How to start
 Build the WASM module using `./build.sh`.
