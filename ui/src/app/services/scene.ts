@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import type { ParsedMesh } from './obj-loader';
+import { ObjLoader, type ParsedMesh } from './obj-loader';
 import { TerrainGenerator } from './terrain-generator';
 
 export interface Vec3 {
@@ -88,6 +88,25 @@ export interface SkyboxConfig {
   width: number;
   height: number;
   brightness: number;
+}
+
+export async function loadSkyboxFromUrl(url: string, brightness = 1): Promise<SkyboxConfig> {
+  const img = new Image();
+  img.src = url;
+  await img.decode();
+  const canvas = document.createElement('canvas');
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(img, 0, 0);
+  const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const pixels = new Float32Array(canvas.width * canvas.height * 3);
+  for (let i = 0, j = 0; i < data.length; i += 4, j += 3) {
+    pixels[j] = data[i] / 255;
+    pixels[j + 1] = data[i + 1] / 255;
+    pixels[j + 2] = data[i + 2] / 255;
+  }
+  return { pixels, width: canvas.width, height: canvas.height, brightness };
 }
 
 export interface CloudConfig {
@@ -328,8 +347,41 @@ const DEFAULT_SCENE: SceneConfig = {
 export class Scene {
   scene = signal<SceneConfig>(structuredClone(DEFAULT_SCENE));
 
-  constructor(private terrainGenerator: TerrainGenerator) {
+  readonly assetsRevision = signal(0);
+
+  constructor(
+    private terrainGenerator: TerrainGenerator,
+    private objLoader: ObjLoader,
+  ) {
     this.initializeTerrainMeshes();
+    this.initializeDefaultObjectMeshes();
+    this.initializeDefaultSkybox();
+  }
+
+  private async initializeDefaultObjectMeshes(): Promise<void> {
+    const objects = this.scene().objects;
+    if (!objects.some(o => !o.mesh)) return;
+    try {
+      const text = await fetch('/Lantern.obj').then(r => r.text());
+      const mesh = this.objLoader.parse(text);
+      this.scene().objects.forEach((obj, i) => {
+        if (!obj.mesh) this.updateObject(i, { mesh });
+      });
+      this.assetsRevision.update(r => r + 1);
+    } catch (err) {
+      console.error('Failed to load default object mesh /Lantern.obj', err);
+    }
+  }
+
+  private async initializeDefaultSkybox(): Promise<void> {
+    if (this.scene().skybox) return;
+    try {
+      const skybox = await loadSkyboxFromUrl('/skytexture.jpg');
+      this.setSkybox(skybox);
+      this.assetsRevision.update(r => r + 1);
+    } catch (err) {
+      console.error('Failed to load default skybox /skytexture.jpg', err);
+    }
   }
 
   private async initializeTerrainMeshes(): Promise<void> {
@@ -348,6 +400,7 @@ export class Scene {
           seed: terrain.seed,
         });
         this.updateTerrain(i, { mesh });
+        this.assetsRevision.update(r => r + 1);
       }
     }
   }

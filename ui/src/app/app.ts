@@ -34,6 +34,7 @@ export class App {
 
       const { width, height } = this.windowSize();
       this.renderTick();
+      this.scene.assetsRevision();
       canvas.nativeElement.width = width;
       canvas.nativeElement.height = height;
 
