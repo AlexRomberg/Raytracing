@@ -20,7 +20,7 @@ export class TerrainGenerator {
 
   private ensureReady(): Promise<void> {
     if (!this.ready) {
-      this.ready = init({ module_or_path: '/raytracer_bg.wasm' }).then(() => {});
+      this.ready = init({ module_or_path: './raytracer_bg.wasm' }).then(() => { });
     }
     return this.ready;
   }

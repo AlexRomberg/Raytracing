@@ -362,7 +362,7 @@ export class Scene {
     const objects = this.scene().objects;
     if (!objects.some(o => !o.mesh)) return;
     try {
-      const text = await fetch('/Lantern.obj').then(r => r.text());
+      const text = await fetch('./Lantern.obj').then(r => r.text());
       const mesh = this.objLoader.parse(text);
       this.scene().objects.forEach((obj, i) => {
         if (!obj.mesh) this.updateObject(i, { mesh });
@@ -376,7 +376,7 @@ export class Scene {
   private async initializeDefaultSkybox(): Promise<void> {
     if (this.scene().skybox) return;
     try {
-      const skybox = await loadSkyboxFromUrl('/skytexture.jpg');
+      const skybox = await loadSkyboxFromUrl('./skytexture.jpg');
       this.setSkybox(skybox);
       this.assetsRevision.update(r => r + 1);
     } catch (err) {

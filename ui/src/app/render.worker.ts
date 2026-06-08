@@ -25,7 +25,7 @@ addEventListener("message", async ({ data }: MessageEvent<SceneData>) => {
   const { width, height, startRow, endRow, sphereData, triangleData, lightData, diffuseIntensity, skyboxPixels, skyboxWidth, skyboxHeight, skyboxBrightness, cloudData, samplesPerAxis } = data;
 
   if (!initialized) {
-    await init({ module_or_path: "/raytracer_bg.wasm" });
+    await init({ module_or_path: "./raytracer_bg.wasm" });
     initialized = true;
   }
 
